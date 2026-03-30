@@ -206,6 +206,52 @@
     .kpi-rank-val  { font-size: 15px; font-weight: 900; color: var(--text-primary); text-align: right; }
     .kpi-rank-pct  { font-size: 10px; color: var(--text-secondary); text-align: right; }
 
+    /* ---- 27卒承諾テーブル ---- */
+    .sales-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 32px;
+    }
+    .sales-section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .sales-section-header .stitle {
+      font-size: 14px; font-weight: 700; color: var(--text-primary);
+    }
+    .sales-section-header .sbadge {
+      font-size: 11px; font-weight: 700; color: #7c3aed;
+      background: #ede9fe; padding: 3px 10px; border-radius: 99px;
+    }
+    .sales-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .sales-table th {
+      background: var(--bg); color: var(--text-secondary);
+      padding: 10px 20px; text-align: center;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+      border-bottom: 1px solid var(--border); white-space: nowrap;
+    }
+    .sales-table th:first-child { text-align: left; }
+    .sales-table td {
+      padding: 13px 20px; text-align: center;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .sales-table td:first-child { text-align: left; font-weight: 700; }
+    .sales-table tr:last-child td { border-bottom: none; }
+    .sales-table tr.sales-total td {
+      background: var(--bg); font-weight: 700;
+      border-top: 1px solid var(--border);
+    }
+    .sales-count { font-size: 20px; font-weight: 900; color: #7c3aed; }
+    .sales-amount { font-size: 20px; font-weight: 900; color: var(--green); }
+    .sales-unit { font-size: 12px; color: var(--text-secondary); margin-left: 2px; }
+    .sales-bar-bg { background: var(--border); border-radius: 99px; height: 4px; margin-top: 4px; }
+    .sales-bar-fill { height: 4px; border-radius: 99px; background: var(--green); }
+
     /* ---- Sidebar ---- */
     .layout-wrap { display: flex; align-items: flex-start; min-height: calc(100vh - 53px); }
 
@@ -300,8 +346,12 @@
 
   <!-- Sidebar Nav -->
   <nav id="sidebar">
+    <div class="nav-group-label">実績</div>
+    <a class="nav-item active" data-target="section-27">
+      <span class="nav-icon">🎓</span> 27卒 承諾実績
+    </a>
     <div class="nav-group-label">概要</div>
-    <a class="nav-item active" data-target="section-hero">
+    <a class="nav-item" data-target="section-hero">
       <span class="nav-icon">⭐</span> 最重要KPI
     </a>
     <div class="nav-group-label">担当者</div>
@@ -329,6 +379,32 @@
 
   <div id="sidebar-main">
   <div class="container">
+
+  <!-- 27卒 承諾実績 -->
+  <div id="section-27" class="section">
+    <div class="sales-section">
+      <div class="sales-section-header">
+        <span class="stitle">🎓 27卒 承諾実績（アドバイザー別）</span>
+        <span class="sbadge" id="sales-total-badge">集計中...</span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="sales-table">
+          <thead>
+            <tr>
+              <th>アドバイザー</th>
+              <th>承諾数</th>
+              <th>売上（万円）</th>
+              <th>平均単価（万円）</th>
+              <th style="width:160px;">売上割合</th>
+            </tr>
+          </thead>
+          <tbody id="sales-body">
+            <tr><td colspan="5" style="text-align:center;color:var(--text-secondary);padding:20px;">読み込み中...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
   <!-- Hero KPIs -->
   <div id="section-hero" class="hero">
@@ -947,6 +1023,119 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
 })();
 
 // ======================================================
+// 27卒 承諾実績テーブル
+// ======================================================
+(async function() {
+  const SALES_SHEET_ID = '1E3iQ6_jg8ohBJFShs7uRxFR1CtNygSYU7F-u8Qj_0nU';
+  const SALES_GID      = '588019868';
+  const SALES_URL      = `https://docs.google.com/spreadsheets/d/${SALES_SHEET_ID}/export?format=csv&gid=${SALES_GID}`;
+
+  const tbody = document.getElementById('sales-body');
+  const badge = document.getElementById('sales-total-badge');
+
+  try {
+    const resp = await fetch(SALES_URL);
+    if (!resp.ok) throw new Error('fetch failed');
+    const text = await resp.text();
+
+    // CSVパース
+    function parseCSVSimple(t) {
+      const rows = [];
+      for (const line of t.split('\n')) {
+        const row = []; let cur = '', inQ = false;
+        for (let i = 0; i < line.length; i++) {
+          const c = line[i];
+          if (c === '"') { inQ = !inQ; }
+          else if (c === ',' && !inQ) { row.push(cur.trim().replace(/^"|"$/g,'')); cur = ''; }
+          else { cur += c; }
+        }
+        row.push(cur.trim().replace(/^"|"$/g,''));
+        rows.push(row);
+      }
+      return rows;
+    }
+
+    const rows = parseCSVSimple(text);
+
+    // ヘッダー行を探す（「担当」「卒業年度」「承諾/辞退」「金額」が含まれる行）
+    let headerIdx = -1, colMap = {};
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      if (r.includes('担当') && r.includes('卒業年度') && r.includes('承諾/辞退')) {
+        headerIdx = i;
+        r.forEach((h, idx) => {
+          if (h && !(h in colMap)) colMap[h] = idx; // 同名カラムは最初の出現を使う
+        });
+        break;
+      }
+    }
+    if (headerIdx === -1) throw new Error('ヘッダー行が見つかりません');
+
+    // 27卒 & 承諾 のデータを抽出してアドバイザー別に集計
+    const advisorMap = {};
+    for (let i = headerIdx + 1; i < rows.length; i++) {
+      const r = rows[i];
+      const nendo   = (r[colMap['卒業年度']] || '').trim();
+      const status  = (r[colMap['承諾/辞退']] || '').trim();
+      const advisor = (r[colMap['担当']] || '').trim();
+      const amtRaw  = (r[colMap['金額']] || '').replace(/[¥,]/g, '').trim();
+      const amt     = parseFloat(amtRaw) || 0;
+
+      if (nendo !== '27卒' || status !== '承諾' || !advisor) continue;
+
+      if (!advisorMap[advisor]) advisorMap[advisor] = { count: 0, total: 0 };
+      advisorMap[advisor].count++;
+      advisorMap[advisor].total += amt;
+    }
+
+    // 売上合計（バー描画用）
+    const grandTotal = Object.values(advisorMap).reduce((s, v) => s + v.total, 0);
+    const grandCount = Object.values(advisorMap).reduce((s, v) => s + v.count, 0);
+
+    // 売上降順でソート
+    const sorted = Object.entries(advisorMap).sort((a, b) => b[1].total - a[1].total);
+
+    if (sorted.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-secondary);padding:20px;">27卒承諾データなし</td></tr>';
+      badge.textContent = '0件';
+      return;
+    }
+
+    // テーブル描画
+    const toMan = v => (v / 10000).toFixed(0);
+    const avgMan = (total, count) => count ? (total / count / 10000).toFixed(0) : '0';
+    const barPct = total => grandTotal ? Math.round((total / grandTotal) * 100) : 0;
+
+    tbody.innerHTML = sorted.map(([name, d]) => `
+      <tr>
+        <td>${name}</td>
+        <td><span class="sales-count">${d.count}</span><span class="sales-unit">件</span></td>
+        <td><span class="sales-amount">${toMan(d.total)}</span><span class="sales-unit">万円</span></td>
+        <td>${avgMan(d.total, d.count)} 万円</td>
+        <td>
+          <div style="font-size:11px;color:var(--text-secondary);margin-bottom:3px;">${barPct(d.total)}%</div>
+          <div class="sales-bar-bg"><div class="sales-bar-fill" style="width:${barPct(d.total)}%"></div></div>
+        </td>
+      </tr>
+    `).join('') + `
+      <tr class="sales-total">
+        <td>合計</td>
+        <td><span class="sales-count">${grandCount}</span><span class="sales-unit">件</span></td>
+        <td><span class="sales-amount">${toMan(grandTotal)}</span><span class="sales-unit">万円</span></td>
+        <td>${avgMan(grandTotal, grandCount)} 万円</td>
+        <td>—</td>
+      </tr>
+    `;
+
+    badge.textContent = `${grandCount}件 / ${toMan(grandTotal)}万円`;
+
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-secondary);padding:20px;">データ取得失敗: ${e.message}</td></tr>`;
+    badge.textContent = 'エラー';
+  }
+})();
+
+// ======================================================
 // Sidebar navigation
 // ======================================================
 (function() {
@@ -968,7 +1157,7 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
   }
 
   // IntersectionObserver でスクロール位置に応じてハイライト
-  const sectionIds = ['section-hero','section-persons','section-charts','section-summary','section-funnel','section-kpi-rank','section-total-rank'];
+  const sectionIds = ['section-27','section-hero','section-persons','section-charts','section-summary','section-funnel','section-kpi-rank','section-total-rank'];
   const observers = [];
   let currentActive = 'section-hero';
 
