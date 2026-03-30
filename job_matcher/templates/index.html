@@ -63,28 +63,31 @@
       margin-bottom: 6px;
     }
 
-    .upload-area {
-      border: 2px dashed #ddd;
+    textarea {
+      width: 100%;
+      height: 240px;
+      border: 1.5px solid #ddd;
       border-radius: 8px;
-      padding: 20px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.2s;
-      position: relative;
+      padding: 14px;
+      font-size: 0.9rem;
+      font-family: inherit;
+      resize: vertical;
+      line-height: 1.7;
+      color: #333;
+      transition: border-color 0.2s;
+      outline: none;
     }
-    .upload-area:hover, .upload-area.dragover {
+    textarea:focus {
       border-color: #e94560;
-      background: #fff5f7;
+      box-shadow: 0 0 0 3px rgba(233,69,96,0.08);
     }
-    .upload-area input[type="file"] {
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-      cursor: pointer;
+    textarea::placeholder { color: #bbb; }
+    .char-count {
+      text-align: right;
+      font-size: 0.78rem;
+      color: #aaa;
+      margin-top: 4px;
     }
-    .upload-area .icon { font-size: 2rem; margin-bottom: 8px; }
-    .upload-area p { font-size: 0.85rem; color: #888; }
-    .upload-area .filename { font-size: 0.85rem; color: #e94560; font-weight: 600; margin-top: 6px; }
 
     .submit-btn {
       width: 100%;
@@ -284,13 +287,12 @@
 
       <form id="analyzeForm">
         <div class="form-group">
-          <label>Notta文字起こしファイル（.txt）</label>
-          <div class="upload-area" id="uploadArea">
-            <input type="file" id="fileInput" accept=".txt,.md,.text">
-            <div class="icon">📄</div>
-            <p>クリックまたはドラッグ＆ドロップでファイルを選択</p>
-            <div class="filename" id="fileName"></div>
-          </div>
+          <label>Notta文字起こしをここに貼り付け</label>
+          <textarea
+            id="transcriptInput"
+            placeholder="Nottaでコピーした文字起こしをそのまま貼り付けてください..."
+          ></textarea>
+          <div class="char-count"><span id="charCount">0</span> 文字</div>
         </div>
 
         <button type="submit" class="submit-btn" id="submitBtn" disabled>
@@ -348,36 +350,15 @@
 </div>
 
 <script>
-  // ファイルアップロード
-  const fileInput = document.getElementById('fileInput');
-  const uploadArea = document.getElementById('uploadArea');
-  const fileNameEl = document.getElementById('fileName');
+  const transcriptInput = document.getElementById('transcriptInput');
+  const charCount = document.getElementById('charCount');
   const submitBtn = document.getElementById('submitBtn');
 
-  let uploadedText = '';
-
-  function handleFile(file) {
-    if (!file) return;
-    fileNameEl.textContent = file.name;
-    const reader = new FileReader();
-    reader.onload = e => {
-      uploadedText = e.target.result;
-      submitBtn.disabled = false;
-    };
-    reader.readAsText(file, 'utf-8');
-  }
-
-  fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
-
-  uploadArea.addEventListener('dragover', e => {
-    e.preventDefault();
-    uploadArea.classList.add('dragover');
-  });
-  uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
-  uploadArea.addEventListener('drop', e => {
-    e.preventDefault();
-    uploadArea.classList.remove('dragover');
-    handleFile(e.dataTransfer.files[0]);
+  // 文字数カウント＆ボタン制御
+  transcriptInput.addEventListener('input', () => {
+    const len = transcriptInput.value.length;
+    charCount.textContent = len.toLocaleString();
+    submitBtn.disabled = len < 10;
   });
 
   // フォーム送信
@@ -386,9 +367,10 @@
 
     const loading = document.getElementById('loading');
     const errorBox = document.getElementById('errorBox');
+    const text = transcriptInput.value.trim();
 
-    if (!uploadedText.trim()) {
-      errorBox.textContent = 'ファイルをアップロードしてください。';
+    if (!text) {
+      errorBox.textContent = '文字起こしを貼り付けてください。';
       errorBox.style.display = 'block';
       return;
     }
@@ -399,7 +381,7 @@
     loading.style.display = 'block';
 
     const formData = new FormData();
-    formData.append('transcript', uploadedText);
+    formData.append('transcript', text);
 
     try {
       const res = await fetch('/analyze', { method: 'POST', body: formData });
@@ -483,8 +465,9 @@
   function resetForm() {
     document.getElementById('results').style.display = 'none';
     document.getElementById('formSection').style.display = 'block';
-    document.getElementById('submitBtn').disabled = false;
-    document.getElementById('submitBtn').style.display = 'block';
+    submitBtn.style.display = 'block';
+    // テキストが残っていればボタンを有効に
+    submitBtn.disabled = transcriptInput.value.trim().length < 10;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 </script>
