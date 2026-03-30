@@ -365,6 +365,9 @@
     <a class="nav-item active" data-target="section-27">
       <span class="nav-icon">🎓</span> 27卒 承諾実績
     </a>
+    <a class="nav-item" data-target="section-yomi">
+      <span class="nav-icon">📋</span> ヨミ表の人数
+    </a>
     <div class="nav-group-label">概要</div>
     <a class="nav-item" data-target="section-hero">
       <span class="nav-icon">⭐</span> 最重要KPI
@@ -410,12 +413,35 @@
               <th>承諾数</th>
               <th>売上（万円）</th>
               <th>平均単価（万円）</th>
-              <th>ヨミ表の人数</th>
               <th style="width:160px;">売上割合</th>
             </tr>
           </thead>
           <tbody id="sales-body">
-            <tr><td colspan="6" style="text-align:center;color:var(--text-secondary);padding:20px;">読み込み中...</td></tr>
+            <tr><td colspan="5" style="text-align:center;color:var(--text-secondary);padding:20px;">読み込み中...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ヨミ表の人数 -->
+  <div id="section-yomi" class="section">
+    <div class="sales-section">
+      <div class="sales-section-header">
+        <span class="stitle">📋 ヨミ表の人数（アドバイザー別）</span>
+        <span class="sbadge" id="yomi-total-badge">集計中...</span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="sales-table">
+          <thead>
+            <tr>
+              <th>アドバイザー</th>
+              <th>ヨミ表の人数</th>
+              <th style="width:200px;">状況</th>
+            </tr>
+          </thead>
+          <tbody id="yomi-body">
+            <tr><td colspan="3" style="text-align:center;color:var(--text-secondary);padding:20px;">読み込み中...</td></tr>
           </tbody>
         </table>
       </div>
@@ -1143,56 +1169,74 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
     const sorted = Object.entries(advisorMap).sort((a, b) => b[1].total - a[1].total);
 
     if (sorted.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);padding:20px;">27卒承諾データなし</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-secondary);padding:20px;">27卒承諾データなし</td></tr>';
       badge.textContent = '0件';
-      return;
+    } else {
+      // 承諾実績テーブル描画
+      const toMan  = v => (v / 10000).toFixed(0);
+      const avgMan = (total, count) => count ? (total / count / 10000).toFixed(0) : '0';
+      const barPct = total => grandTotal ? Math.round((total / grandTotal) * 100) : 0;
+
+      tbody.innerHTML = sorted.map(([name, d]) => `
+        <tr>
+          <td>${name}</td>
+          <td><span class="sales-count">${d.count}</span><span class="sales-unit">件</span></td>
+          <td><span class="sales-amount">${toMan(d.total)}</span><span class="sales-unit">万円</span></td>
+          <td>${avgMan(d.total, d.count)} 万円</td>
+          <td>
+            <div style="font-size:11px;color:var(--text-secondary);margin-bottom:3px;">${barPct(d.total)}%</div>
+            <div class="sales-bar-bg"><div class="sales-bar-fill" style="width:${barPct(d.total)}%"></div></div>
+          </td>
+        </tr>
+      `).join('') + `
+        <tr class="sales-total">
+          <td>合計</td>
+          <td><span class="sales-count">${grandCount}</span><span class="sales-unit">件</span></td>
+          <td><span class="sales-amount">${toMan(grandTotal)}</span><span class="sales-unit">万円</span></td>
+          <td>${avgMan(grandTotal, grandCount)} 万円</td>
+          <td>—</td>
+        </tr>
+      `;
+      badge.textContent = `${grandCount}件 / ${toMan(grandTotal)}万円`;
     }
 
-    // テーブル描画
-    const toMan  = v => (v / 10000).toFixed(0);
-    const avgMan = (total, count) => count ? (total / count / 10000).toFixed(0) : '0';
-    const barPct = total => grandTotal ? Math.round((total / grandTotal) * 100) : 0;
-
-    const yomiCell = (name) => {
-      const n = yomiMap[name] || 0;
-      const isRed = n <= 6;
-      const style = isRed
-        ? 'color:#dc2626;font-weight:900;font-size:18px;'
-        : 'color:var(--green);font-weight:900;font-size:18px;';
-      const icon = isRed ? ' ⚠️' : '';
-      return `<span style="${style}">${n}</span><span class="sales-unit">人${icon}</span>`;
-    };
-
+    // ---- ヨミ表テーブル描画 ----
+    const yomiTbody = document.getElementById('yomi-body');
+    const yomiBadge = document.getElementById('yomi-total-badge');
     const grandYomi = Object.values(yomiMap).reduce((s, v) => s + v, 0);
 
-    tbody.innerHTML = sorted.map(([name, d]) => `
-      <tr>
-        <td>${name}</td>
-        <td><span class="sales-count">${d.count}</span><span class="sales-unit">件</span></td>
-        <td><span class="sales-amount">${toMan(d.total)}</span><span class="sales-unit">万円</span></td>
-        <td>${avgMan(d.total, d.count)} 万円</td>
-        <td>${yomiCell(name)}</td>
-        <td>
-          <div style="font-size:11px;color:var(--text-secondary);margin-bottom:3px;">${barPct(d.total)}%</div>
-          <div class="sales-bar-bg"><div class="sales-bar-fill" style="width:${barPct(d.total)}%"></div></div>
-        </td>
-      </tr>
-    `).join('') + `
-      <tr class="sales-total">
-        <td>合計</td>
-        <td><span class="sales-count">${grandCount}</span><span class="sales-unit">件</span></td>
-        <td><span class="sales-amount">${toMan(grandTotal)}</span><span class="sales-unit">万円</span></td>
-        <td>${avgMan(grandTotal, grandCount)} 万円</td>
-        <td><span style="font-size:18px;font-weight:900;">${grandYomi}</span><span class="sales-unit">人</span></td>
-        <td>—</td>
-      </tr>
-    `;
+    // 全アドバイザーをヨミ表人数の多い順でソート
+    const yomiSorted = Object.entries(yomiMap).sort((a, b) => b[1] - a[1]);
 
-    badge.textContent = `${grandCount}件 / ${toMan(grandTotal)}万円`;
+    if (yomiSorted.length === 0) {
+      yomiTbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-secondary);padding:20px;">データなし</td></tr>';
+      yomiBadge.textContent = '0人';
+    } else {
+      yomiTbody.innerHTML = yomiSorted.map(([name, n]) => {
+        const isRed = n <= 6;
+        const numStyle  = isRed ? 'color:#e05252;font-weight:900;font-size:22px;' : 'font-weight:900;font-size:22px;color:var(--accent);';
+        const statusBg  = isRed ? 'background:#fee2e2;color:#991b1b;' : 'background:#d1fae5;color:#065f46;';
+        const statusTxt = isRed ? '⚠️ 要補充（6人以下）' : '✅ 良好';
+        return `
+          <tr>
+            <td style="font-weight:700;">${name}</td>
+            <td><span style="${numStyle}">${n}</span><span class="sales-unit">人</span></td>
+            <td><span style="display:inline-block;padding:4px 14px;border-radius:99px;font-size:12px;font-weight:700;${statusBg}">${statusTxt}</span></td>
+          </tr>
+        `;
+      }).join('') + `
+        <tr class="sales-total">
+          <td>合計</td>
+          <td><span style="font-size:22px;font-weight:900;">${grandYomi}</span><span class="sales-unit">人</span></td>
+          <td>—</td>
+        </tr>
+      `;
+      yomiBadge.textContent = `合計 ${grandYomi}人`;
+    }
 
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);padding:20px;">データ取得失敗: ${e.message}</td></tr>`;
-    badge.textContent = 'エラー';
+    document.getElementById('sales-body').innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-secondary);padding:20px;">データ取得失敗: ${e.message}</td></tr>`;
+    document.getElementById('sales-total-badge').textContent = 'エラー';
   }
 })();
 
@@ -1218,7 +1262,7 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
   }
 
   // IntersectionObserver でスクロール位置に応じてハイライト
-  const sectionIds = ['section-27','section-hero','section-persons','section-charts','section-summary','section-funnel','section-kpi-rank','section-total-rank'];
+  const sectionIds = ['section-27','section-yomi','section-hero','section-persons','section-charts','section-summary','section-funnel','section-kpi-rank','section-total-rank'];
   const observers = [];
   let currentActive = 'section-hero';
 
