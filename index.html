@@ -141,6 +141,8 @@
     .kpi-item { background: var(--bg); border-radius: 10px; padding: 10px 14px; border: 1px solid transparent; }
     .kpi-item.highlight  { border-color: #fcd34d; background: #fffbeb; }
     .kpi-item.highlight2 { border-color: var(--accent); background: var(--accent-lt); }
+    .kpi-item--danger { border-color: #fca5a5 !important; background: #fff5f5 !important; }
+    .kpi-item--danger .kpi-result { color: var(--red) !important; }
     .kpi-label  { font-size: 11px; color: var(--text-secondary); margin-bottom: 3px; }
     .kpi-values { display: flex; align-items: baseline; gap: 6px; }
     .kpi-result { font-size: 20px; font-weight: 900; color: var(--text-primary); }
@@ -669,21 +671,34 @@ function renderDashboard(personsData, month) {
   const cardContainer = document.getElementById('person-cards');
   cardContainer.innerHTML = '';
 
+  // 各KPIの全担当者平均（結果値）を事前計算
+  const KPI_FIELDS = ['内定数','1次選考参加数','新規面談','提案数','応募承諾数','説明会参加済み','最終参加数'];
+  const kpiAvg = {};
+  KPI_FIELDS.forEach(field => {
+    const vals = PERSONS.map(p => personsData[p][month]?.result?.[field] ?? 0).filter(v => v > 0);
+    kpiAvg[field] = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+  });
+
   PERSONS.forEach((p, idx) => {
     const d = personsData[p][month];
     if (!d) return;
     const t = d.target; const r = d.result;
 
-    function kpiHtml(label, rVal, tVal, cls='') {
-      const p = Math.min(120, pct(rVal, tVal));
-      const fillCls = p >= 100 ? 'fill-green' : p >= 70 ? 'fill-orange' : 'fill-red';
-      return `<div class="kpi-item ${cls}">
-        <div class="kpi-label">${label}</div>
+    function kpiHtml(label, rVal, tVal, field, cls='') {
+      const pp = Math.min(120, pct(rVal, tVal));
+      const fillCls = pp >= 100 ? 'fill-green' : pp >= 70 ? 'fill-orange' : 'fill-red';
+      const avg = kpiAvg[field] || 0;
+      const isBelowAvg = avg > 0 && rVal < avg;
+      const dangerMark = isBelowAvg
+        ? `<span title="平均(${avg.toFixed(1)})を下回っています" style="font-size:13px;margin-left:4px;cursor:help;">⚠️</span>`
+        : '';
+      return `<div class="kpi-item ${cls}${isBelowAvg ? ' kpi-item--danger' : ''}">
+        <div class="kpi-label">${label}${dangerMark}</div>
         <div class="kpi-values">
           <span class="kpi-result">${rVal}</span>
           <span class="kpi-target">/ 目標${tVal}</span>
         </div>
-        <div class="kpi-bar-bg"><div class="kpi-bar-fill ${fillCls}" style="width:${Math.min(100,p)}%"></div></div>
+        <div class="kpi-bar-bg"><div class="kpi-bar-fill ${fillCls}" style="width:${Math.min(100,pp)}%"></div></div>
       </div>`;
     }
 
@@ -691,13 +706,13 @@ function renderDashboard(personsData, month) {
       <div class="person-card" style="border-top-color:${PERSON_COLORS[idx % PERSON_COLORS.length]}">
         <h3>${p}</h3>
         <div class="person-kpis">
-          ${kpiHtml('★ 内定数', r['内定数'], t['内定数'], 'highlight')}
-          ${kpiHtml('◆ 1次選考参加数', r['1次選考参加数'], t['1次選考参加数'], 'highlight2')}
-          ${kpiHtml('新規面談', r['新規面談'], t['新規面談'])}
-          ${kpiHtml('提案数', r['提案数'], t['提案数'])}
-          ${kpiHtml('応募承諾数', r['応募承諾数'], t['応募承諾数'])}
-          ${kpiHtml('説明会参加', r['説明会参加済み'], t['説明会参加済み'])}
-          ${kpiHtml('最終参加数', r['最終参加数'], t['最終参加数'])}
+          ${kpiHtml('★ 内定数',        r['内定数'],          t['内定数'],          '内定数',          'highlight')}
+          ${kpiHtml('◆ 1次選考参加数', r['1次選考参加数'],   t['1次選考参加数'],   '1次選考参加数',   'highlight2')}
+          ${kpiHtml('新規面談',         r['新規面談'],         t['新規面談'],         '新規面談')}
+          ${kpiHtml('提案数',           r['提案数'],           t['提案数'],           '提案数')}
+          ${kpiHtml('応募承諾数',       r['応募承諾数'],       t['応募承諾数'],       '応募承諾数')}
+          ${kpiHtml('説明会参加',       r['説明会参加済み'],   t['説明会参加済み'],   '説明会参加済み')}
+          ${kpiHtml('最終参加数',       r['最終参加数'],       t['最終参加数'],       '最終参加数')}
         </div>
       </div>`;
   });
