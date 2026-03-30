@@ -395,11 +395,12 @@
               <th>承諾数</th>
               <th>売上（万円）</th>
               <th>平均単価（万円）</th>
+              <th>ヨミ表の人数</th>
               <th style="width:160px;">売上割合</th>
             </tr>
           </thead>
           <tbody id="sales-body">
-            <tr><td colspan="5" style="text-align:center;color:var(--text-secondary);padding:20px;">読み込み中...</td></tr>
+            <tr><td colspan="6" style="text-align:center;color:var(--text-secondary);padding:20px;">読み込み中...</td></tr>
           </tbody>
         </table>
       </div>
@@ -1028,15 +1029,19 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
 (async function() {
   const SALES_SHEET_ID = '1E3iQ6_jg8ohBJFShs7uRxFR1CtNygSYU7F-u8Qj_0nU';
   const SALES_GID      = '588019868';
-  const SALES_URL      = `https://docs.google.com/spreadsheets/d/${SALES_SHEET_ID}/export?format=csv&gid=${SALES_GID}`;
+  const YOMI_GID       = '291145562';
+  const SALES_URL = `https://docs.google.com/spreadsheets/d/${SALES_SHEET_ID}/export?format=csv&gid=${SALES_GID}`;
+  const YOMI_URL  = `https://docs.google.com/spreadsheets/d/${SALES_SHEET_ID}/export?format=csv&gid=${YOMI_GID}`;
 
   const tbody = document.getElementById('sales-body');
   const badge = document.getElementById('sales-total-badge');
 
   try {
-    const resp = await fetch(SALES_URL);
-    if (!resp.ok) throw new Error('fetch failed');
-    const text = await resp.text();
+    // 両シートを並行取得
+    const [salesResp, yomiResp] = await Promise.all([fetch(SALES_URL), fetch(YOMI_URL)]);
+    if (!salesResp.ok) throw new Error('承諾シート取得失敗');
+    if (!yomiResp.ok)  throw new Error('ヨミ表シート取得失敗');
+    const [text, yomiText] = await Promise.all([salesResp.text(), yomiResp.text()]);
 
     // CSVパース
     function parseCSVSimple(t) {
@@ -1088,6 +1093,33 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
       advisorMap[advisor].total += amt;
     }
 
+    // ---- ヨミ表パース（担当CAごとに人数を集計）----
+    const yomiMap = {};
+    const yomiRows = parseCSVSimple(yomiText);
+    let yomiHeaderIdx = -1, yomiColMap = {};
+    for (let i = 0; i < yomiRows.length; i++) {
+      const r = yomiRows[i];
+      if (r.includes('担当CA') && r.includes('学生名')) {
+        yomiHeaderIdx = i;
+        r.forEach((h, idx) => { if (h && !(h in yomiColMap)) yomiColMap[h] = idx; });
+        break;
+      }
+    }
+    if (yomiHeaderIdx !== -1) {
+      for (let i = yomiHeaderIdx + 1; i < yomiRows.length; i++) {
+        const r = yomiRows[i];
+        const student  = (r[yomiColMap['学生名']] || '').trim();
+        const advisor  = (r[yomiColMap['担当CA']] || '').trim();
+        if (!student || !advisor) continue;
+        yomiMap[advisor] = (yomiMap[advisor] || 0) + 1;
+      }
+    }
+
+    // 承諾実績 + ヨミ表のアドバイザーをマージ
+    Object.keys(yomiMap).forEach(adv => {
+      if (!advisorMap[adv]) advisorMap[adv] = { count: 0, total: 0 };
+    });
+
     // 売上合計（バー描画用）
     const grandTotal = Object.values(advisorMap).reduce((s, v) => s + v.total, 0);
     const grandCount = Object.values(advisorMap).reduce((s, v) => s + v.count, 0);
@@ -1096,15 +1128,27 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
     const sorted = Object.entries(advisorMap).sort((a, b) => b[1].total - a[1].total);
 
     if (sorted.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-secondary);padding:20px;">27卒承諾データなし</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);padding:20px;">27卒承諾データなし</td></tr>';
       badge.textContent = '0件';
       return;
     }
 
     // テーブル描画
-    const toMan = v => (v / 10000).toFixed(0);
+    const toMan  = v => (v / 10000).toFixed(0);
     const avgMan = (total, count) => count ? (total / count / 10000).toFixed(0) : '0';
     const barPct = total => grandTotal ? Math.round((total / grandTotal) * 100) : 0;
+
+    const yomiCell = (name) => {
+      const n = yomiMap[name] || 0;
+      const isRed = n <= 6;
+      const style = isRed
+        ? 'color:#dc2626;font-weight:900;font-size:18px;'
+        : 'color:var(--green);font-weight:900;font-size:18px;';
+      const icon = isRed ? ' ⚠️' : '';
+      return `<span style="${style}">${n}</span><span class="sales-unit">人${icon}</span>`;
+    };
+
+    const grandYomi = Object.values(yomiMap).reduce((s, v) => s + v, 0);
 
     tbody.innerHTML = sorted.map(([name, d]) => `
       <tr>
@@ -1112,6 +1156,7 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
         <td><span class="sales-count">${d.count}</span><span class="sales-unit">件</span></td>
         <td><span class="sales-amount">${toMan(d.total)}</span><span class="sales-unit">万円</span></td>
         <td>${avgMan(d.total, d.count)} 万円</td>
+        <td>${yomiCell(name)}</td>
         <td>
           <div style="font-size:11px;color:var(--text-secondary);margin-bottom:3px;">${barPct(d.total)}%</div>
           <div class="sales-bar-bg"><div class="sales-bar-fill" style="width:${barPct(d.total)}%"></div></div>
@@ -1123,6 +1168,7 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
         <td><span class="sales-count">${grandCount}</span><span class="sales-unit">件</span></td>
         <td><span class="sales-amount">${toMan(grandTotal)}</span><span class="sales-unit">万円</span></td>
         <td>${avgMan(grandTotal, grandCount)} 万円</td>
+        <td><span style="font-size:18px;font-weight:900;">${grandYomi}</span><span class="sales-unit">人</span></td>
         <td>—</td>
       </tr>
     `;
@@ -1130,7 +1176,7 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
     badge.textContent = `${grandCount}件 / ${toMan(grandTotal)}万円`;
 
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-secondary);padding:20px;">データ取得失敗: ${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);padding:20px;">データ取得失敗: ${e.message}</td></tr>`;
     badge.textContent = 'エラー';
   }
 })();
