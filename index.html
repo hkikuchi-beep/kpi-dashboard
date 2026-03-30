@@ -240,6 +240,18 @@
       background: white; padding: 3px 12px; border-radius: 99px;
       border: 1px solid var(--accent);
     }
+    .sales-section-header--highlight {
+      background: var(--accent);
+    }
+    .sales-section-header--highlight .stitle {
+      color: #ffffff;
+      font-size: 15px;
+    }
+    .sbadge--white {
+      background: rgba(255,255,255,0.2) !important;
+      color: #ffffff !important;
+      border-color: rgba(255,255,255,0.5) !important;
+    }
     .sales-table { width: 100%; border-collapse: collapse; font-size: 13px; }
     .sales-table th {
       background: var(--accent-lt); color: var(--accent);
@@ -402,9 +414,9 @@
   <!-- 27卒 承諾実績 -->
   <div id="section-27" class="section">
     <div class="sales-section">
-      <div class="sales-section-header">
+      <div class="sales-section-header sales-section-header--highlight">
         <span class="stitle">🎓 27卒 承諾実績（アドバイザー別）</span>
-        <span class="sbadge" id="sales-total-badge">集計中...</span>
+        <span class="sbadge sbadge--white" id="sales-total-badge">集計中...</span>
       </div>
       <div style="overflow-x:auto;">
         <table class="sales-table">
