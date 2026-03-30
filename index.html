@@ -206,12 +206,54 @@
     .kpi-rank-val  { font-size: 15px; font-weight: 900; color: var(--text-primary); text-align: right; }
     .kpi-rank-pct  { font-size: 10px; color: var(--text-secondary); text-align: right; }
 
+    /* ---- Sidebar ---- */
+    .layout-wrap { display: flex; align-items: flex-start; min-height: calc(100vh - 53px); }
+
+    #sidebar {
+      width: 200px;
+      flex-shrink: 0;
+      position: sticky;
+      top: 0;
+      height: calc(100vh - 53px);
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 20px 0 40px;
+    }
+    #sidebar .nav-group-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--text-secondary);
+      padding: 4px 20px 8px; margin-top: 16px;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 20px;
+      font-size: 13px; font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      transition: all 0.15s;
+      user-select: none;
+      text-decoration: none;
+    }
+    .nav-item:hover { background: var(--bg); color: var(--text-primary); }
+    .nav-item.active {
+      color: var(--accent);
+      border-left-color: var(--accent);
+      background: #eff6ff;
+      font-weight: 700;
+    }
+    .nav-icon { font-size: 14px; width: 18px; text-align: center; flex-shrink: 0; }
+
+    #sidebar-main { flex: 1; overflow: hidden; }
+
     @media (max-width: 768px) {
       .hero, .charts-row, .person-cards, .kpi-rankings-grid { grid-template-columns: 1fr; }
       .hero-card .result-num { font-size: 48px; }
       header { padding: 14px 16px; }
       .podium { flex-wrap: wrap; align-items: center; }
       .podium-card, .podium-base { width: 110px; }
+      #sidebar { display: none; }
     }
   </style>
 </head>
@@ -254,10 +296,42 @@
 
 <!-- Dashboard -->
 <div id="dashboard">
-<div class="container">
+<div class="layout-wrap">
+
+  <!-- Sidebar Nav -->
+  <nav id="sidebar">
+    <div class="nav-group-label">概要</div>
+    <a class="nav-item active" data-target="section-hero">
+      <span class="nav-icon">⭐</span> 最重要KPI
+    </a>
+    <div class="nav-group-label">担当者</div>
+    <a class="nav-item" data-target="section-persons">
+      <span class="nav-icon">👤</span> 担当者別 KPI
+    </a>
+    <div class="nav-group-label">分析</div>
+    <a class="nav-item" data-target="section-charts">
+      <span class="nav-icon">📊</span> グラフ
+    </a>
+    <a class="nav-item" data-target="section-summary">
+      <span class="nav-icon">📋</span> サマリー表
+    </a>
+    <a class="nav-item" data-target="section-funnel">
+      <span class="nav-icon">🔽</span> 採用ファネル
+    </a>
+    <div class="nav-group-label">ランキング</div>
+    <a class="nav-item" data-target="section-kpi-rank">
+      <span class="nav-icon">🏅</span> KPI別ランキング
+    </a>
+    <a class="nav-item" data-target="section-total-rank">
+      <span class="nav-icon">🏆</span> 総合ランキング
+    </a>
+  </nav>
+
+  <div id="sidebar-main">
+  <div class="container">
 
   <!-- Hero KPIs -->
-  <div class="hero">
+  <div id="section-hero" class="hero">
     <div class="hero-card gold">
       <div class="rank">★ 最重要KPI</div>
       <div class="label">内定数</div>
@@ -285,13 +359,13 @@
   </div>
 
   <!-- Person Cards -->
-  <div class="section">
+  <div id="section-persons" class="section">
     <div class="section-title">担当者別 詳細KPI</div>
     <div class="person-cards" id="person-cards"></div>
   </div>
 
   <!-- Charts -->
-  <div class="charts-row">
+  <div id="section-charts" class="charts-row">
     <div class="chart-card">
       <h3>担当者別 内定数（目標 vs 結果）</h3>
       <canvas id="naiteiChart" height="200"></canvas>
@@ -303,7 +377,7 @@
   </div>
 
   <!-- Summary Table -->
-  <div class="section">
+  <div id="section-summary" class="section">
     <div class="section-title">担当者別 主要KPIサマリー</div>
     <div class="table-wrap">
       <table>
@@ -326,7 +400,7 @@
   </div>
 
   <!-- Funnel -->
-  <div class="section">
+  <div id="section-funnel" class="section">
     <div class="section-title">採用ファネル（全体合計）</div>
     <div class="table-wrap">
       <table class="funnel-table">
@@ -345,13 +419,13 @@
   </div>
 
   <!-- KPI別ランキング -->
-  <div class="section">
+  <div id="section-kpi-rank" class="section">
     <div class="section-title">KPI別ランキング</div>
     <div class="kpi-rankings-grid" id="kpi-rankings-grid"></div>
   </div>
 
   <!-- Ranking -->
-  <div class="section">
+  <div id="section-total-rank" class="section">
     <div class="section-title">担当者ランキング（総合スコア）</div>
     <div class="podium" id="podium"></div>
     <div class="ranking-table-wrap">
@@ -372,8 +446,10 @@
     <div class="weight-note">※ 総合スコア = 内定達成率×50% ＋ 1次選考達成率×30% ＋ 提案数達成率×20%（各達成率は120%上限）</div>
   </div>
 
-</div>
-</div>
+</div><!-- /container -->
+</div><!-- /sidebar-main -->
+</div><!-- /layout-wrap -->
+</div><!-- /dashboard -->
 
 <script>
 // ======================================================
@@ -868,6 +944,47 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
   } catch (e) {
     showError(e.message || 'スプレッドシートの取得に失敗しました。');
   }
+})();
+
+// ======================================================
+// Sidebar navigation
+// ======================================================
+(function() {
+  const navItems = document.querySelectorAll('.nav-item[data-target]');
+
+  // クリックでスムーズスクロール
+  navItems.forEach(item => {
+    item.addEventListener('click', () => {
+      const target = document.getElementById(item.dataset.target);
+      if (!target) return;
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setActive(item.dataset.target);
+    });
+  });
+
+  // アクティブ状態を更新
+  function setActive(targetId) {
+    navItems.forEach(n => n.classList.toggle('active', n.dataset.target === targetId));
+  }
+
+  // IntersectionObserver でスクロール位置に応じてハイライト
+  const sectionIds = ['section-hero','section-persons','section-charts','section-summary','section-funnel','section-kpi-rank','section-total-rank'];
+  const observers = [];
+  let currentActive = 'section-hero';
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        currentActive = entry.target.id;
+        setActive(currentActive);
+      }
+    });
+  }, { root: null, rootMargin: '-40% 0px -50% 0px', threshold: 0 });
+
+  sectionIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) observer.observe(el);
+  });
 })();
 </script>
 
