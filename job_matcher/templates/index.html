@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>求人推薦システム</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic', sans-serif;
+      background: #f5f5f5;
+      color: #222;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #1a1a2e;
+      color: #fff;
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header h1 { font-size: 1.3rem; font-weight: 600; }
+    header .badge {
+      background: #e94560;
+      color: #fff;
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 0 16px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 32px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+
+    .card h2 {
+      font-size: 1.1rem;
+      margin-bottom: 24px;
+      color: #1a1a2e;
+      border-left: 4px solid #e94560;
+      padding-left: 12px;
+    }
+
+    .form-group { margin-bottom: 20px; }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 6px;
+    }
+
+    .upload-area {
+      border: 2px dashed #ddd;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+    .upload-area:hover, .upload-area.dragover {
+      border-color: #e94560;
+      background: #fff5f7;
+    }
+    .upload-area input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+    .upload-area .icon { font-size: 2rem; margin-bottom: 8px; }
+    .upload-area p { font-size: 0.85rem; color: #888; }
+    .upload-area .filename { font-size: 0.85rem; color: #e94560; font-weight: 600; margin-top: 6px; }
+
+    .submit-btn {
+      width: 100%;
+      padding: 14px;
+      background: #e94560;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      font-family: inherit;
+      margin-top: 8px;
+    }
+    .submit-btn:hover { background: #c73650; }
+    .submit-btn:active { transform: scale(0.99); }
+    .submit-btn:disabled { background: #aaa; cursor: not-allowed; }
+
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 40px;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #eee;
+      border-top-color: #e94560;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-box {
+      background: #fff0f0;
+      border: 1px solid #ffcdd2;
+      border-radius: 8px;
+      padding: 16px;
+      color: #c62828;
+      font-size: 0.9rem;
+      margin-top: 16px;
+      display: none;
+    }
+
+    .db-info {
+      text-align: center;
+      font-size: 0.8rem;
+      color: #aaa;
+      margin-top: 16px;
+    }
+
+    /* Results */
+    #results { display: none; margin-top: 32px; }
+
+    .result-section {
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+    }
+    .result-section h3 {
+      font-size: 1rem;
+      color: #1a1a2e;
+      margin-bottom: 14px;
+      border-left: 4px solid #e94560;
+      padding-left: 10px;
+    }
+
+    .summary-text {
+      font-size: 0.9rem;
+      line-height: 1.8;
+      color: #444;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .tag {
+      background: #f0f4ff;
+      color: #3040a0;
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    .tag.ng {
+      background: #fff0f0;
+      color: #c62828;
+    }
+    .tag.industry {
+      background: #f0fff4;
+      color: #1b5e20;
+    }
+
+    .job-card {
+      border: 1.5px solid #eee;
+      border-radius: 10px;
+      padding: 18px 20px;
+      margin-bottom: 14px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .job-card:hover {
+      border-color: #e94560;
+      box-shadow: 0 2px 8px rgba(233,69,96,0.1);
+    }
+
+    .job-card-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .job-rank {
+      background: #1a1a2e;
+      color: #fff;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .job-rank.top3 { background: #e94560; }
+
+    .job-info { flex: 1; }
+    .job-company {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 4px;
+    }
+    .job-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 0.78rem;
+    }
+    .job-meta span {
+      background: #f5f5f5;
+      color: #555;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .job-reason {
+      font-size: 0.85rem;
+      color: #555;
+      line-height: 1.7;
+      border-top: 1px solid #f0f0f0;
+      padding-top: 10px;
+    }
+    .job-reason strong { color: #e94560; }
+
+    .job-url a {
+      font-size: 0.8rem;
+      color: #e94560;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .job-url a:hover { text-decoration: underline; }
+
+    .btn-back {
+      display: inline-block;
+      padding: 10px 24px;
+      background: #1a1a2e;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 500;
+    }
+    .btn-back:hover { background: #2a2a4e; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>求人推薦システム</h1>
+  <span class="badge">AI</span>
+</header>
+
+<div class="container">
+  <!-- 入力フォーム -->
+  <div id="formSection">
+    <div class="card">
+      <h2>面談記録から求人を推薦</h2>
+
+      <form id="analyzeForm">
+        <div class="form-group">
+          <label>Notta文字起こしファイル（.txt）</label>
+          <div class="upload-area" id="uploadArea">
+            <input type="file" id="fileInput" accept=".txt,.md,.text">
+            <div class="icon">📄</div>
+            <p>クリックまたはドラッグ＆ドロップでファイルを選択</p>
+            <div class="filename" id="fileName"></div>
+          </div>
+        </div>
+
+        <button type="submit" class="submit-btn" id="submitBtn" disabled>
+          求人を推薦する →
+        </button>
+      </form>
+
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p style="color:#888; font-size:0.9rem;">面談内容を分析中...<br>Claude AIが求人をマッチングしています</p>
+      </div>
+
+      <div class="error-box" id="errorBox"></div>
+
+      <p class="db-info">求人DB: {{ jobs_count }} 件登録済み</p>
+    </div>
+  </div>
+
+  <!-- 結果表示 -->
+  <div id="results">
+    <div style="margin-bottom:16px;">
+      <button class="btn-back" onclick="resetForm()">← 新しい分析</button>
+      <span id="resultTitle" style="margin-left:16px; font-weight:600; color:#1a1a2e;"></span>
+    </div>
+
+    <!-- サマリー -->
+    <div class="result-section">
+      <h3>面談サマリー</h3>
+      <p class="summary-text" id="summaryText"></p>
+    </div>
+
+    <!-- 就活軸 / NG / 業界 -->
+    <div class="result-section">
+      <h3>就活軸</h3>
+      <div class="tags" id="axesTags"></div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">
+      <div class="result-section" style="margin-bottom:0">
+        <h3>NG条件</h3>
+        <div class="tags" id="ngTags"></div>
+      </div>
+      <div class="result-section" style="margin-bottom:0">
+        <h3>向いてる業界</h3>
+        <div class="tags" id="industryTags"></div>
+      </div>
+    </div>
+
+    <!-- 推薦求人 -->
+    <div class="result-section">
+      <h3 id="recTitle">推薦求人</h3>
+      <div id="jobsList"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ファイルアップロード
+  const fileInput = document.getElementById('fileInput');
+  const uploadArea = document.getElementById('uploadArea');
+  const fileNameEl = document.getElementById('fileName');
+  const submitBtn = document.getElementById('submitBtn');
+
+  let uploadedText = '';
+
+  function handleFile(file) {
+    if (!file) return;
+    fileNameEl.textContent = file.name;
+    const reader = new FileReader();
+    reader.onload = e => {
+      uploadedText = e.target.result;
+      submitBtn.disabled = false;
+    };
+    reader.readAsText(file, 'utf-8');
+  }
+
+  fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
+
+  uploadArea.addEventListener('dragover', e => {
+    e.preventDefault();
+    uploadArea.classList.add('dragover');
+  });
+  uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+  uploadArea.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadArea.classList.remove('dragover');
+    handleFile(e.dataTransfer.files[0]);
+  });
+
+  // フォーム送信
+  document.getElementById('analyzeForm').addEventListener('submit', async e => {
+    e.preventDefault();
+
+    const loading = document.getElementById('loading');
+    const errorBox = document.getElementById('errorBox');
+
+    if (!uploadedText.trim()) {
+      errorBox.textContent = 'ファイルをアップロードしてください。';
+      errorBox.style.display = 'block';
+      return;
+    }
+
+    errorBox.style.display = 'none';
+    submitBtn.disabled = true;
+    submitBtn.style.display = 'none';
+    loading.style.display = 'block';
+
+    const formData = new FormData();
+    formData.append('transcript', uploadedText);
+
+    try {
+      const res = await fetch('/analyze', { method: 'POST', body: formData });
+      const data = await res.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      showResults(data);
+    } catch (err) {
+      errorBox.textContent = 'エラー: ' + err.message;
+      errorBox.style.display = 'block';
+      submitBtn.disabled = false;
+      submitBtn.style.display = 'block';
+    } finally {
+      loading.style.display = 'none';
+    }
+  });
+
+  function showResults(data) {
+    document.getElementById('formSection').style.display = 'none';
+    document.getElementById('results').style.display = 'block';
+
+    document.getElementById('resultTitle').textContent = '推薦結果';
+
+    document.getElementById('summaryText').textContent = data.summary || '';
+
+    // 就活軸
+    const axesEl = document.getElementById('axesTags');
+    axesEl.innerHTML = (data.axes || []).map(a =>
+      `<span class="tag">${a}</span>`
+    ).join('');
+
+    // NG条件
+    const ngEl = document.getElementById('ngTags');
+    ngEl.innerHTML = (data.ng_conditions || []).map(n =>
+      `<span class="tag ng">✗ ${n}</span>`
+    ).join('');
+
+    // 向いてる業界
+    const indEl = document.getElementById('industryTags');
+    indEl.innerHTML = (data.suitable_industries || []).map(i =>
+      `<span class="tag industry">${i}</span>`
+    ).join('');
+
+    // 推薦求人
+    const recs = data.recommendations || [];
+    document.getElementById('recTitle').textContent = `推薦求人 (${recs.length}件)`;
+    const jobsList = document.getElementById('jobsList');
+    jobsList.innerHTML = recs.map(job => {
+      const isTop = job.rank <= 3;
+      return `
+        <div class="job-card">
+          <div class="job-card-header">
+            <div class="job-rank ${isTop ? 'top3' : ''}">${job.rank}</div>
+            <div class="job-info">
+              <div class="job-company">${job.company}</div>
+              <div class="job-meta">
+                <span>${job.industry || ''}</span>
+                <span>${job.job_type || ''}</span>
+              </div>
+            </div>
+            ${job.url ? `<div class="job-url"><a href="${job.url}" target="_blank">求人票 →</a></div>` : ''}
+          </div>
+          <div class="job-reason">${formatReason(job.reason)}</div>
+        </div>`;
+    }).join('');
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function formatReason(text) {
+    if (!text) return '';
+    // 改行を<br>に変換し、キーワードを強調
+    return text
+      .replace(/\n/g, '<br>')
+      .replace(/「(.+?)」/g, '<strong>「$1」</strong>');
+  }
+
+  function resetForm() {
+    document.getElementById('results').style.display = 'none';
+    document.getElementById('formSection').style.display = 'block';
+    document.getElementById('submitBtn').disabled = false;
+    document.getElementById('submitBtn').style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+</script>
+
+</body>
+</html>
