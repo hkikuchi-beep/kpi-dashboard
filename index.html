@@ -185,6 +185,18 @@
     .score-cell { display: flex; align-items: center; justify-content: center; gap: 6px; }
     .weight-note { font-size: 11px; color: #888; margin-top: 8px; text-align: right; }
 
+    /* KPI別ランキング */
+    .kpi-rankings-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 8px; }
+    .kpi-rank-card { background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; }
+    .kpi-rank-header { padding: 10px 14px; font-size: 13px; font-weight: 700; color: white; }
+    .kpi-rank-row { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-bottom: 1px solid #f0f0f0; }
+    .kpi-rank-row:last-child { border-bottom: none; }
+    .kpi-rank-pos { font-size: 18px; width: 28px; text-align: center; flex-shrink: 0; }
+    .kpi-rank-name { font-weight: 700; font-size: 13px; flex: 1; }
+    .kpi-rank-val { font-size: 15px; font-weight: 800; color: #1F3864; text-align: right; }
+    .kpi-rank-pct { font-size: 10px; color: #888; text-align: right; }
+    @media (max-width: 768px) { .kpi-rankings-grid { grid-template-columns: 1fr; } }
+
     @media (max-width: 768px) {
       .hero, .charts-row { grid-template-columns: 1fr; }
       .hero-card .result-num { font-size: 48px; }
@@ -323,6 +335,12 @@
         <tbody id="funnel-body"></tbody>
       </table>
     </div>
+  </div>
+
+  <!-- KPI別ランキング -->
+  <div class="section">
+    <div class="section-title">KPI別ランキング</div>
+    <div class="kpi-rankings-grid" id="kpi-rankings-grid"></div>
   </div>
 
   <!-- Ranking -->
@@ -587,6 +605,46 @@ function renderDashboard(personsData, month) {
       </tr>`;
 
     prevResult = rVal;
+  });
+
+  // --- KPI別ランキング ---
+  const KPI_RANK_DEFS = [
+    { key: '内定数',        label: '★ 内定数',        unit: '件', color: '#B8860B' },
+    { key: '1次選考参加数', label: '◆ 1次選考参加数', unit: '人', color: '#2255a4' },
+    { key: '提案数',        label: '提案数',           unit: '件', color: '#5a9e6f' },
+    { key: '応募承諾数',    label: '応募承諾数',       unit: '件', color: '#9966CC' },
+    { key: '新規面談',      label: '新規面談数',       unit: '件', color: '#c0392b' },
+    { key: '説明会参加済み',label: '説明会参加数',     unit: '人', color: '#1a7a8a' },
+  ];
+  const RANK_POS_ICONS = ['🥇','🥈','🥉','4'];
+
+  const kpiGrid = document.getElementById('kpi-rankings-grid');
+  kpiGrid.innerHTML = '';
+
+  KPI_RANK_DEFS.forEach(def => {
+    const ranked = PERSONS.map(p => {
+      const d = personsData[p][month];
+      if (!d) return null;
+      const r = d.result[def.key] ?? 0;
+      const t = d.target[def.key] ?? 0;
+      return { name: p, val: r, pct: pct(r, t) };
+    }).filter(Boolean).sort((a, b) => b.val - a.val);
+
+    const rows = ranked.map((s, i) => `
+      <div class="kpi-rank-row">
+        <div class="kpi-rank-pos">${RANK_POS_ICONS[i] ?? (i+1)}</div>
+        <div class="kpi-rank-name">${s.name}</div>
+        <div>
+          <div class="kpi-rank-val">${s.val}<small style="font-size:10px;font-weight:400;"> ${def.unit}</small></div>
+          <div class="kpi-rank-pct">達成率 ${s.pct}%</div>
+        </div>
+      </div>`).join('');
+
+    kpiGrid.innerHTML += `
+      <div class="kpi-rank-card">
+        <div class="kpi-rank-header" style="background:${def.color};">${def.label}</div>
+        ${rows}
+      </div>`;
   });
 
   // --- Ranking ---
