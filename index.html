@@ -388,6 +388,38 @@
 
     #sidebar-main { flex: 1; overflow: hidden; }
 
+    /* ── 週次MTGレポート ── */
+    .weekly-bizbar-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px 22px; margin-bottom: 20px; box-shadow: var(--shadow-sm); }
+    .weekly-bizbar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .weekly-bizbar-label { font-weight: 700; font-size: 14px; color: var(--text-primary); }
+    .weekly-bizbar-stat  { font-size: 13px; color: var(--text-secondary); }
+    .weekly-bizbar-bg    { background: var(--border); border-radius: 99px; height: 10px; overflow: hidden; }
+    .weekly-bizbar-fill  { height: 10px; border-radius: 99px; background: linear-gradient(90deg, var(--accent-dk), var(--accent)); transition: width 1s cubic-bezier(0.22,1,0.36,1); }
+
+    .weekly-signal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 24px; }
+    .signal-card { border-radius: 14px; border: 1.5px solid; padding: 16px 18px; box-shadow: var(--shadow-sm); }
+    .signal-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .signal-emoji { font-size: 20px; }
+    .signal-name  { font-weight: 700; font-size: 15px; color: var(--text-primary); flex: 1; }
+    .signal-badge { font-size: 10px; font-weight: 700; color: #fff; border-radius: 99px; padding: 2px 8px; letter-spacing: 0.5px; }
+    .signal-kpi-row { display: flex; align-items: center; gap: 6px; font-size: 12px; margin-bottom: 6px; }
+    .signal-kpi-name   { color: var(--text-secondary); min-width: 72px; font-size: 11px; }
+    .signal-kpi-val    { font-weight: 700; font-size: 14px; color: var(--text-primary); }
+    .signal-kpi-target { font-size: 11px; color: var(--text-secondary); font-weight: 400; }
+    .signal-kpi-pace   { margin-left: auto; font-weight: 700; font-size: 12px; }
+
+    .weekly-action-title { font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+    .weekly-action-list  { display: flex; flex-direction: column; gap: 12px; }
+    .action-card { background: var(--surface); border-radius: 12px; border: 1px solid var(--border); border-left: 4px solid; padding: 16px 20px; box-shadow: var(--shadow-sm); }
+    .action-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 15px; font-weight: 700; }
+    .action-card-name   { flex: 1; color: var(--text-primary); }
+    .action-card-badge  { font-size: 11px; font-weight: 700; color: #fff; border-radius: 99px; padding: 2px 10px; }
+    .action-kpi-row     { display: grid; grid-template-columns: 80px 1fr; gap: 4px 12px; align-items: baseline; margin-bottom: 10px; font-size: 13px; }
+    .action-kpi-name    { font-weight: 700; color: var(--text-primary); }
+    .action-kpi-progress{ color: var(--text-secondary); }
+    .action-kpi-need    { grid-column: 2; font-size: 12px; color: var(--text-secondary); }
+    .weekly-all-ok { background: #f0fdf4; border: 1px solid #86efac; border-radius: 12px; padding: 18px 22px; color: #16a34a; font-weight: 700; font-size: 14px; text-align: center; }
+
     @media (max-width: 768px) {
       .hero, .charts-row, .person-cards, .kpi-rankings-grid { grid-template-columns: 1fr; }
       .hero-card .result-num { font-size: 44px; }
@@ -456,6 +488,9 @@
     <div class="nav-group-label">担当者</div>
     <a class="nav-item" data-target="section-persons">
       <span class="nav-icon">👤</span> 担当者別 KPI
+    </a>
+    <a class="nav-item" data-target="section-weekly">
+      <span class="nav-icon">📅</span> 週次MTGレポート
     </a>
     <div class="nav-group-label">分析</div>
     <a class="nav-item" data-target="section-charts">
@@ -573,6 +608,12 @@
   <div id="section-persons" class="section">
     <div class="section-title">担当者別 詳細KPI</div>
     <div class="person-cards" id="person-cards"></div>
+  </div>
+
+  <!-- 週次MTGレポート -->
+  <div id="section-weekly" class="section">
+    <div class="section-title">📅 週次MTGレポート</div>
+    <div id="weekly-content"></div>
   </div>
 
   <!-- Charts -->
@@ -1074,6 +1115,197 @@ function renderDashboard(personsData, month) {
         <td>${rateBadge(s.teianPct)}</td>
       </tr>`;
   });
+
+  // --- 週次MTGレポート ---
+  renderWeeklyReport(personsData, month);
+}
+
+// ======================================================
+// 週次MTGレポート
+// ======================================================
+function getBusinessDays(year, month) {
+  const days = [];
+  const d = new Date(year, month - 1, 1);
+  while (d.getMonth() === month - 1) {
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) days.push(new Date(d));
+    d.setDate(d.getDate() + 1);
+  }
+  return days;
+}
+
+function renderWeeklyReport(personsData, month) {
+  const container = document.getElementById('weekly-content');
+  if (!container) return;
+
+  const monthNum = parseInt(month);
+  if (isNaN(monthNum)) { container.innerHTML = '<p style="color:var(--text-secondary)">月次データを選択してください</p>'; return; }
+
+  // 年度推定：4月始まり
+  const now = new Date();
+  const curYear  = now.getFullYear();
+  const curMonth = now.getMonth() + 1;
+  const fyStart  = curMonth >= 4 ? curYear : curYear - 1;
+  const year     = monthNum >= 4 ? fyStart : fyStart + 1;
+
+  const allBizDays   = getBusinessDays(year, monthNum);
+  const totalBiz     = allBizDays.length;
+  const monthStart   = new Date(year, monthNum - 1, 1);
+  const monthEnd     = new Date(year, monthNum, 0);
+  const todayMid     = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  let elapsedBiz;
+  if (todayMid > monthEnd)       elapsedBiz = totalBiz;
+  else if (todayMid < monthStart) elapsedBiz = 0;
+  else elapsedBiz = allBizDays.filter(d => d <= todayMid).length;
+
+  const remainBiz = totalBiz - elapsedBiz;
+  const bizPct    = totalBiz > 0 ? Math.round(elapsedBiz / totalBiz * 100) : 0;
+  const isPast    = todayMid > monthEnd;
+  const isFuture  = todayMid < monthStart;
+  const statusStr = isPast ? '（月終了）' : isFuture ? '（未来月）' : `残り ${remainBiz} 営業日`;
+
+  const PERSONS  = Object.keys(personsData);
+  const KEY_KPIS = ['内定承諾数', '内定数', '1次選考参加数'];
+
+  // ペース計算
+  function calcPace(result, target) {
+    if (target === 0 || totalBiz === 0 || elapsedBiz === 0) return null;
+    return (result / target) / (elapsedBiz / totalBiz);
+  }
+  function paceStatus(pace) {
+    if (pace === null) return 'none';
+    if (pace >= 1.0)   return 'ok';
+    if (pace >= 0.8)   return 'warn';
+    return 'behind';
+  }
+
+  const personPace = {};
+  PERSONS.forEach(p => {
+    const d = personsData[p][month];
+    if (!d) return;
+    personPace[p] = {};
+    KEY_KPIS.forEach(kpi => {
+      const result = d.result[kpi] ?? 0;
+      const target = d.target[kpi] ?? 0;
+      const pace   = calcPace(result, target);
+      const status = paceStatus(pace);
+      const needed = Math.max(0, target - result);
+      personPace[p][kpi] = { result, target, pace, status, needed,
+        dailyNeeded: remainBiz > 0 ? needed / remainBiz : needed };
+    });
+  });
+
+  function overallStatus(pp) {
+    const statuses = Object.values(pp).map(v => v.status);
+    if (statuses.includes('behind')) return 'behind';
+    if (statuses.includes('warn'))   return 'warn';
+    if (statuses.includes('ok'))     return 'ok';
+    return 'none';
+  }
+
+  const SC = {
+    ok:     { emoji: '🟢', label: '順調',       color: '#16a34a', bg: '#f0fdf4', border: '#86efac' },
+    warn:   { emoji: '🟡', label: '注意',       color: '#d97706', bg: '#fffbeb', border: '#fcd34d' },
+    behind: { emoji: '🔴', label: '要フォロー',  color: '#dc2626', bg: '#fff5f5', border: '#fca5a5' },
+    none:   { emoji: '⚪', label: 'データなし',  color: '#9ca3af', bg: '#f9fafb', border: '#e5e7eb' },
+  };
+
+  let html = '';
+
+  // 1. 営業日プログレスバー
+  html += `
+    <div class="weekly-bizbar-wrap">
+      <div class="weekly-bizbar-header">
+        <span class="weekly-bizbar-label">📅 ${year}年${monthNum}月 営業日進捗</span>
+        <span class="weekly-bizbar-stat">${elapsedBiz} / ${totalBiz} 日経過（${bizPct}%）　${statusStr}</span>
+      </div>
+      <div class="weekly-bizbar-bg">
+        <div class="weekly-bizbar-fill" id="weekly-biz-fill" style="width:0%"></div>
+      </div>
+    </div>`;
+
+  // 2. 信号機カード（全員）
+  html += `<div class="weekly-signal-grid">`;
+  PERSONS.forEach(p => {
+    const pp = personPace[p];
+    if (!pp) return;
+    const os = overallStatus(pp);
+    const sc = SC[os];
+    const kpiRows = KEY_KPIS.map(kpi => {
+      const kd = pp[kpi];
+      if (!kd) return '';
+      const paceDisp  = kd.pace !== null ? Math.round(kd.pace * 100) : '-';
+      const paceColor = kd.status === 'ok' ? '#16a34a' : kd.status === 'warn' ? '#d97706' : kd.status === 'behind' ? '#dc2626' : '#9ca3af';
+      return `<div class="signal-kpi-row">
+        <span class="signal-kpi-name">${kpi}</span>
+        <span class="signal-kpi-val">${kd.result}<span class="signal-kpi-target">/${kd.target}</span></span>
+        <span class="signal-kpi-pace" style="color:${paceColor}">${paceDisp}%</span>
+      </div>`;
+    }).join('');
+    html += `
+      <div class="signal-card" style="background:${sc.bg};border-color:${sc.border}">
+        <div class="signal-card-header">
+          <span class="signal-emoji">${sc.emoji}</span>
+          <span class="signal-name">${p}</span>
+          <span class="signal-badge" style="background:${sc.color}">${sc.label}</span>
+        </div>
+        <div class="signal-kpis">${kpiRows}</div>
+      </div>`;
+  });
+  html += `</div>`;
+
+  // 3. 要フォローリスト
+  const behindPersons = PERSONS.filter(p => {
+    const pp = personPace[p];
+    if (!pp) return false;
+    const os = overallStatus(pp);
+    return os === 'behind' || os === 'warn';
+  });
+
+  if (behindPersons.length === 0) {
+    html += `<div class="weekly-all-ok">🎉 全アドバイザーがペース通り進行中です！</div>`;
+  } else {
+    html += `<div class="weekly-action-title">⚠️ フォローアップが必要なアドバイザー</div>`;
+    html += `<div class="weekly-action-list">`;
+    behindPersons.forEach(p => {
+      const pp = personPace[p];
+      const os = overallStatus(pp);
+      const sc = SC[os];
+      const actionRows = KEY_KPIS.map(kpi => {
+        const kd = pp[kpi];
+        if (!kd || kd.status === 'ok' || kd.target === 0) return '';
+        const paceDisp  = kd.pace !== null ? Math.round(kd.pace * 100) : '-';
+        const paceColor = os === 'behind' ? '#dc2626' : '#d97706';
+        const needStr   = remainBiz > 0
+          ? `残り${remainBiz}営業日でさらに <strong>${kd.needed}件</strong> 必要（1日あたり ${kd.dailyNeeded.toFixed(1)} 件ペース）`
+          : `残り営業日なし・あと <strong>${kd.needed}件</strong> 未達`;
+        return `<div class="action-kpi-row">
+          <span class="action-kpi-name">${kpi}</span>
+          <span class="action-kpi-progress">${kd.result} / 目標 ${kd.target}件　ペース <b style="color:${paceColor}">${paceDisp}%</b></span>
+          <span class="action-kpi-need">→ ${needStr}</span>
+        </div>`;
+      }).filter(Boolean).join('');
+      if (!actionRows) return;
+      html += `
+        <div class="action-card" style="border-left-color:${sc.color}">
+          <div class="action-card-header">
+            <span>${sc.emoji}</span>
+            <span class="action-card-name">${p}</span>
+            <span class="action-card-badge" style="background:${sc.color}">${sc.label}</span>
+          </div>
+          <div class="action-kpis">${actionRows}</div>
+        </div>`;
+    });
+    html += `</div>`;
+  }
+
+  container.innerHTML = html;
+  // アニメーション
+  setTimeout(() => {
+    const fill = document.getElementById('weekly-biz-fill');
+    if (fill) fill.style.width = bizPct + '%';
+  }, 100);
 }
 
 // ======================================================
@@ -1483,7 +1715,7 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
   }
 
   // IntersectionObserver でスクロール位置に応じてハイライト
-  const sectionIds = ['section-27','section-yomi','section-hero','section-persons','section-charts','section-summary','section-funnel','section-kpi-rank','section-total-rank'];
+  const sectionIds = ['section-27','section-yomi','section-hero','section-persons','section-weekly','section-charts','section-summary','section-funnel','section-kpi-rank','section-total-rank'];
   const observers = [];
   let currentActive = 'section-hero';
 
