@@ -186,7 +186,7 @@
     }
     .person-card:hover { box-shadow: var(--shadow-lg); }
     .person-card h3 { font-size: 15px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.3px; margin: 0; }
-    .person-kpis { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+    .person-kpis { display: grid; grid-template-columns: repeat(8, 1fr); gap: 10px; }
     .kpi-item { background: var(--bg); border-radius: 10px; padding: 11px 14px; border: 1px solid transparent; transition: border-color 0.15s; }
     .kpi-item:hover { border-color: var(--border); }
     .kpi-item.highlight  { border-color: #fcd34d; background: #fffbeb; }
@@ -733,7 +733,7 @@ function renderDashboard(personsData, month) {
   cardContainer.innerHTML = '';
 
   // 各KPIの全担当者平均（結果値）を事前計算
-  const KPI_FIELDS = ['内定数','1次選考参加数','新規面談','提案数','応募承諾数','説明会参加済み','最終参加数'];
+  const KPI_FIELDS = ['内定数','内定承諾数','1次選考参加数','新規面談','提案数','応募承諾数','説明会参加済み','最終参加数'];
   const kpiAvg = {};
   KPI_FIELDS.forEach(field => {
     const vals = PERSONS.map(p => personsData[p][month]?.result?.[field] ?? 0).filter(v => v > 0);
@@ -741,7 +741,7 @@ function renderDashboard(personsData, month) {
   });
 
   // ファネルキー定義（表示順）
-  const FUNNEL_KEYS = ['新規面談','提案数','応募承諾数','説明会参加済み','1次選考参加数','最終参加数','内定数'];
+  const FUNNEL_KEYS = ['新規面談','提案数','応募承諾数','説明会参加済み','1次選考参加数','最終参加数','内定数','内定承諾数'];
 
   // 全担当者の各ステップ間転換率を事前計算
   const allFunnelRatios = {};
@@ -810,7 +810,8 @@ function renderDashboard(personsData, month) {
           ${kpiHtml('説明会参加',       r['説明会参加済み'],   t['説明会参加済み'],   '説明会参加済み',   '', worstKey==='説明会参加済み')}
           ${kpiHtml('◆ 1次選考参加数', r['1次選考参加数'],   t['1次選考参加数'],   '1次選考参加数',   'highlight2', worstKey==='1次選考参加数')}
           ${kpiHtml('最終参加数',       r['最終参加数'],       t['最終参加数'],       '最終参加数',       '', worstKey==='最終参加数')}
-          ${kpiHtml('★ 内定数',        r['内定数'],          t['内定数'],          '内定数',          'highlight', worstKey==='内定数')}
+          ${kpiHtml('★ 内定数',        r['内定数'],          t['内定数'],          '内定数',          'highlight',  worstKey==='内定数')}
+          ${kpiHtml('内定承諾数',       r['内定承諾数'],      t['内定承諾数'],      '内定承諾数',      'highlight2', worstKey==='内定承諾数')}
         </div>
       </div>`;
   });
@@ -1153,6 +1154,7 @@ const HEADER_ALIASES = {
   '1次選考参加数':   '1次選考参加数',
   '最終参加数':     '最終参加数',
   '内定数':         '内定数',
+  '内定承諾数':     '内定承諾数',
 };
 
 function parseSheetData(csvText) {
