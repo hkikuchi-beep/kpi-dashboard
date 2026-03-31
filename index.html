@@ -740,6 +740,26 @@ function renderDashboard(personsData, month) {
     kpiAvg[field] = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
   });
 
+  // ファネルキー定義（表示順）
+  const FUNNEL_KEYS = ['新規面談','提案数','応募承諾数','説明会参加済み','1次選考参加数','最終参加数','内定数'];
+
+  // 全担当者の各ステップ間転換率を事前計算
+  const allFunnelRatios = {};
+  PERSONS.forEach(p => {
+    const r2 = personsData[p][month]?.result || {};
+    allFunnelRatios[p] = FUNNEL_KEYS.slice(0, -1).map((key, si) => {
+      const from = r2[key] || 0;
+      const to   = r2[FUNNEL_KEYS[si + 1]] || 0;
+      return from > 0 ? to / from : null;
+    });
+  });
+
+  // 各ステップ間の全担当者平均転換率
+  const avgStepRatios = FUNNEL_KEYS.slice(0, -1).map((_, si) => {
+    const vals = PERSONS.map(p => allFunnelRatios[p][si]).filter(v => v !== null);
+    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+  });
+
   PERSONS.forEach((p, idx) => {
     const d = personsData[p][month];
     if (!d) return;
@@ -767,25 +787,18 @@ function renderDashboard(personsData, month) {
       </div>`;
     }
 
-    // 歩留まり計算：ファネルの各ステップ間の転換率を比較し、最も低い転換先を特定
-    const funnelSteps = [
-      { key: '新規面談',       val: r['新規面談']       || 0 },
-      { key: '提案数',         val: r['提案数']         || 0 },
-      { key: '応募承諾数',     val: r['応募承諾数']     || 0 },
-      { key: '説明会参加済み', val: r['説明会参加済み'] || 0 },
-      { key: '1次選考参加数',  val: r['1次選考参加数']  || 0 },
-      { key: '最終参加数',     val: r['最終参加数']     || 0 },
-      { key: '内定数',         val: r['内定数']         || 0 },
-    ];
-    let worstKey = null, worstRatio = Infinity;
-    for (let si = 0; si < funnelSteps.length - 1; si++) {
-      const from = funnelSteps[si].val;
-      const to   = funnelSteps[si + 1].val;
-      if (from > 0) {
-        const ratio = to / from;
-        if (ratio < worstRatio) { worstRatio = ratio; worstKey = funnelSteps[si + 1].key; }
+    // 歩留まり計算：他のアドバイザーと比較して最も乖離（下回り）が大きいステップを特定
+    let worstKey = null, worstDev = -Infinity;
+    for (let si = 0; si < FUNNEL_KEYS.length - 1; si++) {
+      const myRatio  = allFunnelRatios[p][si];
+      const avgRatio = avgStepRatios[si];
+      if (myRatio !== null && avgRatio !== null && avgRatio > 0) {
+        const dev = (myRatio - avgRatio) / avgRatio; // マイナスほど平均より低い
+        if (dev < worstDev) { worstDev = dev; worstKey = FUNNEL_KEYS[si + 1]; }
       }
     }
+    // 平均以上なら歩留まりマークなし
+    if (worstDev >= 0) worstKey = null;
 
     cardContainer.innerHTML += `
       <div class="person-card" style="border-top-color:${PERSON_COLORS[idx % PERSON_COLORS.length]}">
