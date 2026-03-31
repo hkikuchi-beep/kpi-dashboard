@@ -403,7 +403,7 @@
     .signal-name  { font-weight: 700; font-size: 15px; color: var(--text-primary); flex: 1; }
     .signal-badge { font-size: 10px; font-weight: 700; color: #fff; border-radius: 99px; padding: 2px 8px; letter-spacing: 0.5px; }
     .signal-kpi-row { display: flex; align-items: center; gap: 6px; font-size: 12px; margin-bottom: 6px; }
-    .signal-kpi-name   { color: var(--text-secondary); min-width: 72px; font-size: 11px; }
+    .signal-kpi-name   { color: var(--text-secondary); min-width: 60px; font-size: 11px; }
     .signal-kpi-val    { font-weight: 700; font-size: 14px; color: var(--text-primary); }
     .signal-kpi-target { font-size: 11px; color: var(--text-secondary); font-weight: 400; }
     .signal-kpi-pace   { margin-left: auto; font-weight: 700; font-size: 12px; }
@@ -1166,7 +1166,16 @@ function renderWeeklyReport(personsData, month) {
   const statusStr = isPast ? '（月終了）' : isFuture ? '（未来月）' : `残り ${remainBiz} 営業日`;
 
   const PERSONS  = Object.keys(personsData);
-  const KEY_KPIS = ['内定承諾数', '内定数', '1次選考参加数'];
+  const KEY_KPIS = [
+    { key: '新規面談',       label: '新規面談'   },
+    { key: '提案数',         label: '提案数'     },
+    { key: '応募承諾数',     label: '応募承諾'   },
+    { key: '説明会参加済み', label: '説明会参加' },
+    { key: '1次選考参加数',  label: '1次選考'    },
+    { key: '最終参加数',     label: '最終参加'   },
+    { key: '内定数',         label: '内定数'     },
+    { key: '内定承諾数',     label: '内定承諾'   },
+  ];
 
   // ペース計算
   function calcPace(result, target) {
@@ -1185,13 +1194,13 @@ function renderWeeklyReport(personsData, month) {
     const d = personsData[p][month];
     if (!d) return;
     personPace[p] = {};
-    KEY_KPIS.forEach(kpi => {
-      const result = d.result[kpi] ?? 0;
-      const target = d.target[kpi] ?? 0;
+    KEY_KPIS.forEach(({ key }) => {
+      const result = d.result[key] ?? 0;
+      const target = d.target[key] ?? 0;
       const pace   = calcPace(result, target);
       const status = paceStatus(pace);
       const needed = Math.max(0, target - result);
-      personPace[p][kpi] = { result, target, pace, status, needed,
+      personPace[p][key] = { result, target, pace, status, needed,
         dailyNeeded: remainBiz > 0 ? needed / remainBiz : needed };
     });
   });
@@ -1232,13 +1241,13 @@ function renderWeeklyReport(personsData, month) {
     if (!pp) return;
     const os = overallStatus(pp);
     const sc = SC[os];
-    const kpiRows = KEY_KPIS.map(kpi => {
-      const kd = pp[kpi];
+    const kpiRows = KEY_KPIS.map(({ key, label }) => {
+      const kd = pp[key];
       if (!kd) return '';
       const paceDisp  = kd.pace !== null ? Math.round(kd.pace * 100) : '-';
       const paceColor = kd.status === 'ok' ? '#16a34a' : kd.status === 'warn' ? '#d97706' : kd.status === 'behind' ? '#dc2626' : '#9ca3af';
       return `<div class="signal-kpi-row">
-        <span class="signal-kpi-name">${kpi}</span>
+        <span class="signal-kpi-name">${label}</span>
         <span class="signal-kpi-val">${kd.result}<span class="signal-kpi-target">/${kd.target}</span></span>
         <span class="signal-kpi-pace" style="color:${paceColor}">${paceDisp}%</span>
       </div>`;
@@ -1272,8 +1281,8 @@ function renderWeeklyReport(personsData, month) {
       const pp = personPace[p];
       const os = overallStatus(pp);
       const sc = SC[os];
-      const actionRows = KEY_KPIS.map(kpi => {
-        const kd = pp[kpi];
+      const actionRows = KEY_KPIS.map(({ key, label }) => {
+        const kd = pp[key];
         if (!kd || kd.status === 'ok' || kd.target === 0) return '';
         const paceDisp  = kd.pace !== null ? Math.round(kd.pace * 100) : '-';
         const paceColor = os === 'behind' ? '#dc2626' : '#d97706';
@@ -1281,7 +1290,7 @@ function renderWeeklyReport(personsData, month) {
           ? `残り${remainBiz}営業日でさらに <strong>${kd.needed}件</strong> 必要（1日あたり ${kd.dailyNeeded.toFixed(1)} 件ペース）`
           : `残り営業日なし・あと <strong>${kd.needed}件</strong> 未達`;
         return `<div class="action-kpi-row">
-          <span class="action-kpi-name">${kpi}</span>
+          <span class="action-kpi-name">${label}</span>
           <span class="action-kpi-progress">${kd.result} / 目標 ${kd.target}件　ペース <b style="color:${paceColor}">${paceDisp}%</b></span>
           <span class="action-kpi-need">→ ${needStr}</span>
         </div>`;
