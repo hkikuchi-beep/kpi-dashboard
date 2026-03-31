@@ -1090,39 +1090,92 @@ function parseCSV(text) {
   return rows;
 }
 
+// シート上のヘッダー文字列 → 内部KPI名のマッピング
+const HEADER_ALIASES = {
+  '新規面談':       '新規面談',
+  '当月新規再面談数': '再面談数',
+  '再面談数':       '再面談数',
+  '新規～提案人数':  '提案人数',
+  '提案人数':       '提案人数',
+  '提案数':         '提案数',
+  '応募承諾数':     '応募承諾数',
+  '説明会参加済み':  '説明会参加済み',
+  '1次選考参加数':   '1次選考参加数',
+  '最終参加数':     '最終参加数',
+  '内定数':         '内定数',
+};
+
 function parseSheetData(csvText) {
   const rows = parseCSV(csvText);
   const personsData = {};
   const monthsSeen  = [];
   let curPerson = null, curMonth = null;
+  let dynColMap = {}; // 月ヘッダー行から動的に構築
 
   for (const row of rows) {
     if (!row.length) continue;
     const col0 = row[0].trim();
 
+    // 担当者行
     if (PERSONS_LIST.includes(col0)) {
       curPerson = col0;
+      curMonth  = null; // 担当者が変わったら月をリセット
+      dynColMap = {};
       if (!personsData[curPerson]) personsData[curPerson] = {};
       continue;
     }
 
-    if (curPerson && /^\d+月$/.test(col0)) {
-      curMonth = col0;
+    // 月ヘッダー行（「3月」「12月」など。全角数字も許容）
+    if (curPerson && /^[0-9０-９]+月$/.test(col0)) {
+      // 全角数字を半角に正規化
+      curMonth = col0.replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xFEE0));
       if (!monthsSeen.includes(curMonth)) monthsSeen.push(curMonth);
       if (!personsData[curPerson][curMonth])
         personsData[curPerson][curMonth] = { target: {}, result: {} };
+
+      // ★ この行のカラム名からインデックスを動的に構築
+      dynColMap = {};
+      for (let i = 1; i < row.length; i++) {
+        const h = row[i].trim();
+        if (h && HEADER_ALIASES[h]) dynColMap[HEADER_ALIASES[h]] = i;
+      }
       continue;
     }
 
+    // 目標・結果行
     if (curPerson && curMonth && (col0 === '目標' || col0 === '結果')) {
       const type = col0 === '目標' ? 'target' : 'result';
       const parsed = {};
-      for (const [idx, name] of Object.entries(COL_MAP)) {
-        parsed[name] = safeNum(row[idx] ?? '');
+
+      if (Object.keys(dynColMap).length > 0) {
+        // 動的マップ優先（列が増えても正確に取得）
+        for (const [kpiName, idx] of Object.entries(dynColMap)) {
+          parsed[kpiName] = safeNum(row[idx] ?? '');
+        }
+      } else {
+        // フォールバック：静的COL_MAP
+        for (const [idx, name] of Object.entries(COL_MAP)) {
+          parsed[name] = safeNum(row[idx] ?? '');
+        }
       }
       personsData[curPerson][curMonth][type] = parsed;
     }
   }
+
+  // データ整合性チェック（コンソールに警告を出す）
+  const allMonths = monthsSeen;
+  for (const person of PERSONS_LIST) {
+    for (const month of allMonths) {
+      const d = personsData[person]?.[month];
+      if (!d) {
+        console.warn(`[KPI] ⚠️ ${person} の ${month} データが見つかりません`);
+      } else {
+        if (!Object.keys(d.target).length) console.warn(`[KPI] ⚠️ ${person} ${month} 目標データが空です`);
+        if (!Object.keys(d.result).length) console.warn(`[KPI] ⚠️ ${person} ${month} 結果データが空です`);
+      }
+    }
+  }
+
   return { personsData, months: monthsSeen };
 }
 
