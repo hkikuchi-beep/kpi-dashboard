@@ -1232,11 +1232,16 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
       }
     }
     if (yomiHeaderIdx !== -1) {
+      const phaseKey = Object.keys(yomiColMap).find(k => k.includes('フェーズ')) || null;
       for (let i = yomiHeaderIdx + 1; i < yomiRows.length; i++) {
         const r = yomiRows[i];
         const student  = (r[yomiColMap['学生名']] || '').trim();
         const advisor  = (r[yomiColMap['担当CA']] || '').trim();
         if (!student || !advisor) continue;
+        if (phaseKey) {
+          const phase = (r[yomiColMap[phaseKey]] || '').trim();
+          if (phase.includes('お見送り')) continue;
+        }
         yomiMap[advisor] = (yomiMap[advisor] || 0) + 1;
       }
     }
