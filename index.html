@@ -185,7 +185,7 @@
     }
     .person-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-1px); }
     .person-card h3 { font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 16px; letter-spacing: -0.3px; }
-    .person-kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .person-kpis { display: grid; grid-template-columns: repeat(7, minmax(100px, 1fr)); gap: 10px; overflow-x: auto; }
     .kpi-item { background: var(--bg); border-radius: 10px; padding: 11px 14px; border: 1px solid transparent; transition: border-color 0.15s; }
     .kpi-item:hover { border-color: var(--border); }
     .kpi-item.highlight  { border-color: #fcd34d; background: #fffbeb; }
@@ -763,13 +763,13 @@ function renderDashboard(personsData, month) {
       <div class="person-card" style="border-top-color:${PERSON_COLORS[idx % PERSON_COLORS.length]}">
         <h3>${p}</h3>
         <div class="person-kpis">
-          ${kpiHtml('★ 内定数',        r['内定数'],          t['内定数'],          '内定数',          'highlight')}
-          ${kpiHtml('◆ 1次選考参加数', r['1次選考参加数'],   t['1次選考参加数'],   '1次選考参加数',   'highlight2')}
           ${kpiHtml('新規面談',         r['新規面談'],         t['新規面談'],         '新規面談')}
           ${kpiHtml('提案数',           r['提案数'],           t['提案数'],           '提案数')}
           ${kpiHtml('応募承諾数',       r['応募承諾数'],       t['応募承諾数'],       '応募承諾数')}
           ${kpiHtml('説明会参加',       r['説明会参加済み'],   t['説明会参加済み'],   '説明会参加済み')}
           ${kpiHtml('最終参加数',       r['最終参加数'],       t['最終参加数'],       '最終参加数')}
+          ${kpiHtml('◆ 1次選考参加数', r['1次選考参加数'],   t['1次選考参加数'],   '1次選考参加数',   'highlight2')}
+          ${kpiHtml('★ 内定数',        r['内定数'],          t['内定数'],          '内定数',          'highlight')}
         </div>
       </div>`;
   });
