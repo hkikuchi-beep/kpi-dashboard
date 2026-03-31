@@ -493,9 +493,6 @@
       <span class="nav-icon">📅</span> 週次MTGレポート
     </a>
     <div class="nav-group-label">分析</div>
-    <a class="nav-item" data-target="section-charts">
-      <span class="nav-icon">📊</span> グラフ
-    </a>
     <a class="nav-item" data-target="section-summary">
       <span class="nav-icon">📋</span> サマリー表
     </a>
@@ -617,17 +614,6 @@
   </div>
 
   <!-- Charts -->
-  <div id="section-charts" class="charts-row">
-    <div class="chart-card">
-      <h3>担当者別 内定数（目標 vs 結果）</h3>
-      <canvas id="naiteiChart" height="200"></canvas>
-    </div>
-    <div class="chart-card">
-      <h3>担当者別 1次選考参加数（目標 vs 結果）</h3>
-      <canvas id="ichijjiChart" height="200"></canvas>
-    </div>
-  </div>
-
   <!-- Summary Table -->
   <div id="section-summary" class="section">
     <div class="section-title">担当者別 主要KPIサマリー</div>
@@ -687,15 +673,16 @@
             <th>順位</th>
             <th>担当者</th>
             <th>総合スコア</th>
-            <th>★ 内定達成率<br><small style="font-weight:400;opacity:.8;">重み 50%</small></th>
-            <th>◆ 1次選考達成率<br><small style="font-weight:400;opacity:.8;">重み 30%</small></th>
-            <th>提案数達成率<br><small style="font-weight:400;opacity:.8;">重み 20%</small></th>
+            <th>🥇 内定承諾達成率<br><small style="font-weight:400;opacity:.8;">重み 40%</small></th>
+            <th>★ 内定達成率<br><small style="font-weight:400;opacity:.8;">重み 30%</small></th>
+            <th>◆ 1次選考達成率<br><small style="font-weight:400;opacity:.8;">重み 20%</small></th>
+            <th>提案数達成率<br><small style="font-weight:400;opacity:.8;">重み 10%</small></th>
           </tr>
         </thead>
         <tbody id="ranking-body"></tbody>
       </table>
     </div>
-    <div class="weight-note">※ 総合スコア = 内定達成率×50% ＋ 1次選考達成率×30% ＋ 提案数達成率×20%（各達成率は120%上限）</div>
+    <div class="weight-note">※ 総合スコア = 内定承諾達成率×40% ＋ 内定達成率×30% ＋ 1次選考達成率×20% ＋ 提案数達成率×10%（各達成率は120%上限）</div>
   </div>
 
 </div><!-- /container -->
@@ -732,8 +719,6 @@ const FALLBACK = {
 // ======================================================
 // Chart instances (to destroy before re-drawing)
 // ======================================================
-let naiteiChartInst = null;
-let ichijjiChartInst = null;
 
 // ======================================================
 // Utility
@@ -890,32 +875,6 @@ function renderDashboard(personsData, month) {
   const ichijTargets   = PERSONS.map(p => personsData[p][month]?.target?.['1次選考参加数'] ?? 0);
   const ichijResults   = PERSONS.map(p => personsData[p][month]?.result?.['1次選考参加数'] ?? 0);
 
-  if (naiteiChartInst)  { naiteiChartInst.destroy();  naiteiChartInst  = null; }
-  if (ichijjiChartInst) { ichijjiChartInst.destroy(); ichijjiChartInst = null; }
-
-  naiteiChartInst = new Chart(document.getElementById('naiteiChart'), {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [
-        { label: '目標', data: naiteiTargets, backgroundColor: 'rgba(184,134,11,0.3)', borderColor: '#B8860B', borderWidth: 1 },
-        { label: '結果', data: naiteiResults, backgroundColor: '#FFD700',              borderColor: '#DAA520', borderWidth: 1 }
-      ]
-    },
-    options: { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
-  });
-
-  ichijjiChartInst = new Chart(document.getElementById('ichijjiChart'), {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [
-        { label: '目標', data: ichijTargets, backgroundColor: 'rgba(31,56,100,0.3)', borderColor: '#2255a4', borderWidth: 1 },
-        { label: '結果', data: ichijResults, backgroundColor: '#4472C4',             borderColor: '#2255a4', borderWidth: 1 }
-      ]
-    },
-    options: { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } }
-  });
 
   // --- Summary Table ---
   const summaryBody = document.getElementById('summary-body');
@@ -1044,22 +1003,24 @@ function renderDashboard(personsData, month) {
 
   // --- Ranking ---
   const CAP = 120; // cap each rate at 120%
-  const WEIGHTS = { naitei: 0.5, ichiji: 0.3, teian: 0.2 };
+  const WEIGHTS = { naisho: 0.4, naitei: 0.3, ichiji: 0.2, teian: 0.1 };
 
   const scores = PERSONS.map(p => {
     const d = personsData[p][month];
     if (!d) return null;
     const t = d.target; const r = d.result;
 
+    const naishoPct = Math.min(CAP, pct(r['内定承諾数'],    t['内定承諾数']));
     const naiteiPct = Math.min(CAP, pct(r['内定数'],        t['内定数']));
     const ichijiPct = Math.min(CAP, pct(r['1次選考参加数'], t['1次選考参加数']));
     const teianPct  = Math.min(CAP, pct(r['提案数'],        t['提案数']));
 
-    const total = naiteiPct * WEIGHTS.naitei
+    const total = naishoPct * WEIGHTS.naisho
+                + naiteiPct * WEIGHTS.naitei
                 + ichijiPct * WEIGHTS.ichiji
                 + teianPct  * WEIGHTS.teian;
 
-    return { name: p, total: Math.round(total * 10) / 10, naiteiPct, ichijiPct, teianPct };
+    return { name: p, total: Math.round(total * 10) / 10, naishoPct, naiteiPct, ichijiPct, teianPct };
   }).filter(Boolean);
 
   scores.sort((a, b) => b.total - a.total);
@@ -1110,6 +1071,7 @@ function renderDashboard(personsData, month) {
             <div class="score-bar-bg"><div class="score-bar-fill" style="width:${barW}%"></div></div>
           </div>
         </td>
+        <td>${rateBadge(s.naishoPct)}</td>
         <td>${rateBadge(s.naiteiPct)}</td>
         <td>${rateBadge(s.ichijiPct)}</td>
         <td>${rateBadge(s.teianPct)}</td>
@@ -1724,7 +1686,7 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
   }
 
   // IntersectionObserver でスクロール位置に応じてハイライト
-  const sectionIds = ['section-27','section-yomi','section-hero','section-persons','section-weekly','section-charts','section-summary','section-funnel','section-kpi-rank','section-total-rank'];
+  const sectionIds = ['section-27','section-yomi','section-hero','section-persons','section-weekly','section-summary','section-funnel','section-kpi-rank','section-total-rank'];
   const observers = [];
   let currentActive = 'section-hero';
 
