@@ -388,6 +388,15 @@
 
     #sidebar-main { flex: 1; overflow: hidden; }
 
+    /* ── 折りたたみトグル ── */
+    .collapsible-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
+    .collapsible-header .section-title { margin-bottom: 0; }
+    .collapse-btn { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: var(--text-secondary); background: var(--bg); border: 1px solid var(--border); border-radius: 99px; padding: 4px 10px; transition: background 0.15s, color 0.15s; }
+    .collapse-btn:hover { background: var(--accent-lt); color: var(--accent); border-color: var(--accent); }
+    .collapse-arrow { transition: transform 0.25s; display: inline-block; }
+    .collapsible-body { overflow: hidden; transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.25s; max-height: 4000px; opacity: 1; }
+    .collapsible-body.collapsed { max-height: 0; opacity: 0; }
+
     /* ── 週次MTGレポート ── */
     .weekly-bizbar-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px 22px; margin-bottom: 20px; box-shadow: var(--shadow-sm); }
     .weekly-bizbar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
@@ -609,8 +618,17 @@
 
   <!-- 週次MTGレポート -->
   <div id="section-weekly" class="section">
-    <div class="section-title">📅 週次MTGレポート</div>
-    <div id="weekly-content"></div>
+    <div class="collapsible-header" id="weekly-toggle">
+      <div class="section-title">📅 週次MTGレポート</div>
+      <button class="collapse-btn" id="weekly-collapse-btn">
+        <span class="collapse-arrow" id="weekly-arrow">▲</span>
+        <span id="weekly-btn-label">閉じる</span>
+      </button>
+    </div>
+    <div class="collapsible-body" id="weekly-body">
+      <div style="height:14px"></div>
+      <div id="weekly-content"></div>
+    </div>
   </div>
 
   <!-- Charts -->
@@ -1702,6 +1720,19 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
     const el = document.getElementById(id);
     if (el) observer.observe(el);
   });
+
+  // 週次MTGレポート 折りたたみトグル
+  const weeklyToggle = document.getElementById('weekly-toggle');
+  const weeklyBody   = document.getElementById('weekly-body');
+  const weeklyArrow  = document.getElementById('weekly-arrow');
+  const weeklyLabel  = document.getElementById('weekly-btn-label');
+  if (weeklyToggle && weeklyBody) {
+    weeklyToggle.addEventListener('click', () => {
+      const isCollapsed = weeklyBody.classList.toggle('collapsed');
+      weeklyArrow.style.transform = isCollapsed ? 'rotate(180deg)' : 'rotate(0deg)';
+      weeklyLabel.textContent = isCollapsed ? '開く' : '閉じる';
+    });
+  }
 })();
 </script>
 
