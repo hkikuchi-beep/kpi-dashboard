@@ -1053,7 +1053,16 @@ const SHEET_ID = '11Y_h32hfgbiz_3BWwV_NIGYJJyxJ5l6SnRB9pS6Iv2g';
 const GID      = '1288413773';
 const CSV_URL  = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`;
 
+// ダッシュボードに表示する担当者（表示順）
 const PERSONS_LIST = ['渡辺', '田中', '永田', '志村'];
+
+// パーサーが「担当者名ではない」と判断するパターン
+// → これ以外の空でないcol0はすべて担当者名として扱う
+const NON_PERSON_PATTERNS = [
+  /^[0-9０-９]+月$/,          // 月（3月・４月など）
+  /^(目標|結果|合計|小計|ALL|年間|備考)$/,
+  /^(新規面談|提案数|応募承諾数|内定数|参加率|提案率)/,  // KPIヘッダー
+];
 
 const COL_MAP = {
   1:  '新規面談',
@@ -1116,10 +1125,10 @@ function parseSheetData(csvText) {
     if (!row.length) continue;
     const col0 = row[0].trim();
 
-    // 担当者行
-    if (PERSONS_LIST.includes(col0)) {
+    // 担当者行（自動検出：NON_PERSON_PATTERNSに当てはまらない非空のcol0）
+    if (col0 && !NON_PERSON_PATTERNS.some(p => p.test(col0))) {
       curPerson = col0;
-      curMonth  = null; // 担当者が変わったら月をリセット
+      curMonth  = null;
       dynColMap = {};
       if (!personsData[curPerson]) personsData[curPerson] = {};
       continue;
