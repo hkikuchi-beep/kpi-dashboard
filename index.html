@@ -118,7 +118,7 @@
     }
 
     /* Hero Cards */
-    .hero { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px; }
+    .hero { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 32px; }
     .hero-card {
       background: var(--surface);
       border-radius: 16px; padding: 28px 32px;
@@ -145,12 +145,14 @@
     }
     .hero-card.gold .result-num { color: var(--gold); }
     .hero-card.blue .result-num { color: var(--accent); }
+    .hero-card.gold2 .result-num { color: var(--gold); }
     .hero-card .target-info { font-size: 13px; color: var(--text-secondary); padding-bottom: 5px; }
     .hero-card .target-info span { font-size: 18px; font-weight: 700; color: var(--text-primary); }
     .progress-bar-wrap { background: var(--border); border-radius: 99px; height: 6px; overflow: hidden; }
     .progress-bar { height: 6px; border-radius: 99px; animation: barGrow 1.2s cubic-bezier(0.22,1,0.36,1) both; }
-    .hero-card.gold .progress-bar { background: linear-gradient(90deg, var(--gold), #f5c842); }
-    .hero-card.blue .progress-bar { background: linear-gradient(90deg, var(--accent-dk), var(--accent)); }
+    .hero-card.gold  .progress-bar { background: linear-gradient(90deg, var(--gold), #f5c842); }
+    .hero-card.gold2 .progress-bar { background: linear-gradient(90deg, var(--gold), #f5c842); }
+    .hero-card.blue  .progress-bar { background: linear-gradient(90deg, var(--accent-dk), var(--accent)); }
     .achieve-pct { font-size: 12px; color: var(--text-secondary); margin-top: 7px; font-weight: 500; }
 
     /* Cards base */
@@ -189,8 +191,11 @@
     .person-kpis { display: grid; grid-template-columns: repeat(8, 1fr); gap: 10px; }
     .kpi-item { background: var(--bg); border-radius: 10px; padding: 11px 14px; border: 1px solid transparent; transition: border-color 0.15s; }
     .kpi-item:hover { border-color: var(--border); }
-    .kpi-item.highlight  { border-color: #fcd34d; background: #fffbeb; }
-    .kpi-item.highlight2 { border-color: var(--accent); background: var(--accent-lt); }
+    .kpi-item.highlight      { border-color: #fcd34d; background: #fffbeb; }
+    .kpi-item.highlight2     { border-color: var(--accent); background: var(--accent-lt); }
+    .kpi-item.highlight-gold { border-color: var(--gold); background: #fff8e6; }
+    .kpi-item.highlight-gold .kpi-result { color: var(--gold); font-weight: 800; }
+    .kpi-item.highlight-gold .kpi-label  { color: var(--gold); font-weight: 700; }
     .kpi-item--danger { border-color: #fca5a5 !important; background: #fff5f5 !important; }
     .kpi-item--danger .kpi-result { color: var(--red) !important; }
     .kpi-item--bottleneck { border-color: #fb923c !important; background: #fff7ed !important; }
@@ -550,6 +555,18 @@
       </div>
       <div class="achieve-pct" id="hero-1ji-pct">達成率 -%</div>
     </div>
+    <div class="hero-card gold2">
+      <div class="rank">🥇 重要KPI</div>
+      <div class="label">内定承諾数</div>
+      <div class="numbers">
+        <div class="result-num" id="hero-naisho-result">-</div>
+        <div class="target-info">目標 <span id="hero-naisho-target">-</span> 件</div>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar" id="pb-naisho" style="width:0%"></div>
+      </div>
+      <div class="achieve-pct" id="hero-naisho-pct">達成率 -%</div>
+    </div>
   </div>
 
   <!-- Person Cards -->
@@ -714,6 +731,10 @@ function renderDashboard(personsData, month) {
   const tot1jiResult = sum(personsData, month, '1次選考参加数', 'result');
   const tot1jiPct    = pct(tot1jiResult, tot1jiTarget);
 
+  const totNaishoTarget = sum(personsData, month, '内定承諾数', 'target');
+  const totNaishoResult = sum(personsData, month, '内定承諾数', 'result');
+  const totNaishoPct    = pct(totNaishoResult, totNaishoTarget);
+
   document.getElementById('hero-naitei-result').textContent = totNaiteiResult;
   document.getElementById('hero-naitei-target').textContent = totNaiteiTarget;
   document.getElementById('hero-naitei-pct').textContent    = `達成率 ${totNaiteiPct}%`;
@@ -722,9 +743,14 @@ function renderDashboard(personsData, month) {
   document.getElementById('hero-1ji-target').textContent = tot1jiTarget;
   document.getElementById('hero-1ji-pct').textContent    = `達成率 ${tot1jiPct}%`;
 
+  document.getElementById('hero-naisho-result').textContent = totNaishoResult;
+  document.getElementById('hero-naisho-target').textContent = totNaishoTarget;
+  document.getElementById('hero-naisho-pct').textContent    = `達成率 ${totNaishoPct}%`;
+
   setTimeout(() => {
-    document.getElementById('pb-naitei').style.width = Math.min(100, totNaiteiPct) + '%';
-    document.getElementById('pb-1ji').style.width    = Math.min(100, tot1jiPct) + '%';
+    document.getElementById('pb-naitei').style.width  = Math.min(100, totNaiteiPct) + '%';
+    document.getElementById('pb-1ji').style.width     = Math.min(100, tot1jiPct) + '%';
+    document.getElementById('pb-naisho').style.width  = Math.min(100, totNaishoPct) + '%';
   }, 100);
 
   // --- Person cards ---
@@ -811,7 +837,7 @@ function renderDashboard(personsData, month) {
           ${kpiHtml('◆ 1次選考参加数', r['1次選考参加数'],   t['1次選考参加数'],   '1次選考参加数',   'highlight2', worstKey==='1次選考参加数')}
           ${kpiHtml('最終参加数',       r['最終参加数'],       t['最終参加数'],       '最終参加数',       '', worstKey==='最終参加数')}
           ${kpiHtml('★ 内定数',        r['内定数'],          t['内定数'],          '内定数',          'highlight',  worstKey==='内定数')}
-          ${kpiHtml('内定承諾数',       r['内定承諾数'],      t['内定承諾数'],      '内定承諾数',      'highlight2', worstKey==='内定承諾数')}
+          ${kpiHtml('🥇 内定承諾数',    r['内定承諾数'],      t['内定承諾数'],      '内定承諾数',      'highlight-gold', worstKey==='内定承諾数')}
         </div>
       </div>`;
   });
