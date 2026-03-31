@@ -1104,11 +1104,10 @@ function renderWeeklyReport(personsData, month) {
   if (isNaN(monthNum)) { container.innerHTML = '<p style="color:var(--text-secondary)">月次データを選択してください</p>'; return; }
 
   // 年度推定：4月始まり
-  const now = new Date();
+  // 4〜12月 → 当年（例：4月=2026）、1〜3月 → 翌年（例：3月=2027）
+  const now      = new Date();
   const curYear  = now.getFullYear();
-  const curMonth = now.getMonth() + 1;
-  const fyStart  = curMonth >= 4 ? curYear : curYear - 1;
-  const year     = monthNum >= 4 ? fyStart : fyStart + 1;
+  const year     = monthNum >= 4 ? curYear : curYear + 1;
 
   const allBizDays   = getBusinessDays(year, monthNum);
   const totalBiz     = allBizDays.length;
