@@ -419,10 +419,10 @@ function renderWeeklyReport(personsData, month) {
     return;
   }
 
-  // 年度推定：4月始まり（4〜12月→当年、1〜3月→翌年）
+  // 年度：常に現在の西暦年を使用（3月は2026年3月として扱う）
   const now      = new Date();
   const curYear  = now.getFullYear();
-  const year     = monthNum >= 4 ? curYear : curYear + 1;
+  const year     = curYear;
 
   const allBizDays   = getBusinessDays(year, monthNum);
   const totalBiz     = allBizDays.length;
