@@ -176,16 +176,16 @@
     .chart-card h3 { font-size: 10px; font-weight: 700; color: var(--text-secondary); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 18px; }
 
     /* Person cards */
-    .person-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 32px; }
+    .person-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
     .person-card {
-      background: var(--surface); border-radius: 16px; padding: 22px 26px;
+      background: var(--surface); border-radius: 16px; padding: 20px 18px;
       box-shadow: var(--shadow); border: 1px solid var(--border);
       border-top: 3px solid var(--accent);
       transition: box-shadow 0.2s, transform 0.2s;
     }
     .person-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-1px); }
-    .person-card h3 { font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 16px; letter-spacing: -0.3px; }
-    .person-kpis { display: grid; grid-template-columns: repeat(7, minmax(100px, 1fr)); gap: 10px; overflow-x: auto; }
+    .person-card h3 { font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 14px; letter-spacing: -0.3px; }
+    .person-kpis { display: grid; grid-template-columns: 1fr; gap: 8px; }
     .kpi-item { background: var(--bg); border-radius: 10px; padding: 11px 14px; border: 1px solid transparent; transition: border-color 0.15s; }
     .kpi-item:hover { border-color: var(--border); }
     .kpi-item.highlight  { border-color: #fcd34d; background: #fffbeb; }
