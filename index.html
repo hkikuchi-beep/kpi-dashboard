@@ -386,7 +386,7 @@
     }
     .nav-icon { font-size: 14px; width: 18px; text-align: center; flex-shrink: 0; }
     .nav-ext-badge { margin-left: auto; font-size: 10px; opacity: 0.6; }
-    .nav-item.nav-weekly { border-top: 1px solid rgba(0,0,0,0.07); margin-top: 4px; padding-top: 13px; }
+    .nav-item.nav-weekly { border-bottom: 1px solid rgba(0,0,0,0.07); margin-bottom: 4px; padding-bottom: 13px; }
 
     #sidebar-main { flex: 1; overflow: hidden; }
 
@@ -485,6 +485,10 @@
 
   <!-- Sidebar Nav -->
   <nav id="sidebar">
+    <a class="nav-item nav-weekly" href="weekly.html">
+      <span class="nav-icon">📅</span> 週次レポート
+      <span class="nav-ext-badge">↗</span>
+    </a>
     <div class="nav-group-label">実績</div>
     <a class="nav-item active" data-target="section-27">
       <span class="nav-icon">🎓</span> 27卒 承諾実績
@@ -499,10 +503,6 @@
     <div class="nav-group-label">担当者</div>
     <a class="nav-item" data-target="section-persons">
       <span class="nav-icon">👤</span> 担当者別 KPI
-    </a>
-    <a class="nav-item nav-weekly" href="weekly.html">
-      <span class="nav-icon">📅</span> 週次レポート
-      <span class="nav-ext-badge">↗</span>
     </a>
     <div class="nav-group-label">分析</div>
     <a class="nav-item" data-target="section-summary">
