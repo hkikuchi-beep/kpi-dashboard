@@ -163,6 +163,21 @@
     .weekly-bizbar-bg    { background: var(--border); border-radius: 99px; height: 10px; overflow: hidden; }
     .weekly-bizbar-fill  { height: 10px; border-radius: 99px; background: linear-gradient(90deg, var(--accent-dk), var(--accent)); transition: width 1s cubic-bezier(0.22,1,0.36,1); }
 
+    /* ── 最重要KPIパネル ── */
+    .hero-pace-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 24px; }
+    .hero-pace-card { background: var(--surface); border-radius: 14px; padding: 20px 22px; box-shadow: var(--shadow); border: 1px solid var(--border); border-top: 4px solid; position: relative; overflow: hidden; }
+    .hero-pace-card::after { content:''; position:absolute; top:0; right:0; width:80px; height:80px; border-radius:50%; opacity:0.08; transform:translate(30px,-30px); }
+    .hero-pace-title { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+    .hero-pace-nums  { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+    .hero-pace-result { font-size: 40px; font-weight: 900; letter-spacing: -1px; font-variant-numeric: tabular-nums; line-height: 1; }
+    .hero-pace-target { font-size: 13px; color: var(--text-secondary); }
+    .hero-pace-bar-bg   { background: var(--border); border-radius: 99px; height: 5px; margin: 8px 0; overflow: hidden; }
+    .hero-pace-bar-fill { height: 5px; border-radius: 99px; transition: width 1s cubic-bezier(0.22,1,0.36,1); }
+    .hero-pace-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 2px; }
+    .hero-pace-pct  { font-size: 12px; color: var(--text-secondary); }
+    .hero-pace-badge { font-size: 11px; font-weight: 700; border-radius: 99px; padding: 2px 10px; color: #fff; }
+    @media (max-width: 768px) { .hero-pace-grid { grid-template-columns: 1fr; } }
+
     .weekly-signal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 24px; }
     .signal-card { border-radius: 14px; border: 1.5px solid; padding: 16px 18px; box-shadow: var(--shadow-sm); }
     .signal-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
@@ -509,7 +524,46 @@ function renderWeeklyReport(personsData, month) {
       </div>
     </div>`;
 
-  // 2. 信号機カード（全員）
+  // 2. 最重要KPI チーム合計ペースカード
+  const HERO_KPIS = [
+    { key: '内定承諾数',    label: '⭐ 内定承諾数', color: '#d4900a', barColor: 'linear-gradient(90deg,#b8760a,#d4900a)', bgColor: '#fffbeb' },
+    { key: '内定数',        label: '🏅 内定数',     color: '#18a572', barColor: 'linear-gradient(90deg,#0f7a54,#18a572)', bgColor: '#f0fdf4' },
+    { key: '1次選考参加数', label: '📋 1次選考',    color: '#3b82f6', barColor: 'linear-gradient(90deg,#1d4ed8,#3b82f6)', bgColor: '#eff6ff' },
+  ];
+  html += `<div class="hero-pace-grid">`;
+  HERO_KPIS.forEach(({ key, label, color, barColor, bgColor }) => {
+    const totResult = PERSONS.reduce((s, p) => s + (personsData[p]?.[month]?.result?.[key] ?? 0), 0);
+    const totTarget = PERSONS.reduce((s, p) => s + (personsData[p]?.[month]?.target?.[key] ?? 0), 0);
+    const pace   = calcPace(totResult, totTarget);
+    const status = paceStatus(pace);
+    const paceDisp = pace !== null ? Math.round(pace * 100) : null;
+    const achPct   = totTarget > 0 ? Math.round(totResult / totTarget * 100) : 0;
+    const sc = SC[status];
+    const barId = `hero-pace-bar-${key.replace(/\s/g,'')}`;
+    html += `
+      <div class="hero-pace-card" style="border-top-color:${color};background:${bgColor}">
+        <div class="hero-pace-card" style="position:absolute;top:0;right:0;width:80px;height:80px;background:${color};border-radius:50%;opacity:0.08;transform:translate(30px,-30px);pointer-events:none;"></div>
+        <div class="hero-pace-title" style="color:${color}">${label}</div>
+        <div class="hero-pace-nums">
+          <span class="hero-pace-result" style="color:${color}">${totResult}</span>
+          <span class="hero-pace-target">/ 目標 ${totTarget} 件</span>
+        </div>
+        <div class="hero-pace-bar-bg">
+          <div class="hero-pace-bar-fill" id="${barId}" style="width:0%;background:${barColor}"></div>
+        </div>
+        <div class="hero-pace-footer">
+          <span class="hero-pace-pct">達成率 ${achPct}%</span>
+          ${paceDisp !== null
+            ? `<span class="hero-pace-badge" style="background:${sc.color}">${sc.emoji} ペース ${paceDisp}%</span>`
+            : `<span class="hero-pace-badge" style="background:#9ca3af">データなし</span>`
+          }
+        </div>
+      </div>`;
+  });
+  html += `</div>`;
+
+  // 3. 担当者別信号機カード
+  html += `<div style="font-size:12px;font-weight:700;color:var(--text-secondary);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">👤 担当者別ペース</div>`;
   html += `<div class="weekly-signal-grid">`;
   PERSONS.forEach(p => {
     const pp = personPace[p];
@@ -587,6 +641,15 @@ function renderWeeklyReport(personsData, month) {
   setTimeout(() => {
     const fill = document.getElementById('weekly-biz-fill');
     if (fill) fill.style.width = bizPct + '%';
+
+    // 最重要KPIバーのアニメーション
+    HERO_KPIS.forEach(({ key }) => {
+      const totResult = PERSONS.reduce((s, p) => s + (personsData[p]?.[month]?.result?.[key] ?? 0), 0);
+      const totTarget = PERSONS.reduce((s, p) => s + (personsData[p]?.[month]?.target?.[key] ?? 0), 0);
+      const achPct = totTarget > 0 ? Math.min(100, Math.round(totResult / totTarget * 100)) : 0;
+      const barEl = document.getElementById(`hero-pace-bar-${key.replace(/\s/g,'')}`);
+      if (barEl) barEl.style.width = achPct + '%';
+    });
   }, 100);
 }
 
