@@ -562,11 +562,12 @@
             <tr>
               <th>アドバイザー</th>
               <th>ヨミ表の人数</th>
-              <th style="width:200px;">状況</th>
+              <th>アクティブ人数</th>
+              <th style="width:200px;">ヨミ表状況</th>
             </tr>
           </thead>
           <tbody id="yomi-body">
-            <tr><td colspan="3" style="text-align:center;color:var(--text-secondary);padding:20px;">読み込み中...</td></tr>
+            <tr><td colspan="4" style="text-align:center;color:var(--text-secondary);padding:20px;">読み込み中...</td></tr>
           </tbody>
         </table>
       </div>
@@ -1294,21 +1295,24 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
 // 27卒 承諾実績テーブル
 // ======================================================
 (async function() {
-  const SALES_SHEET_ID = '1E3iQ6_jg8ohBJFShs7uRxFR1CtNygSYU7F-u8Qj_0nU';
-  const SALES_GID      = '588019868';
-  const YOMI_GID       = '291145562';
-  const SALES_URL = `https://docs.google.com/spreadsheets/d/${SALES_SHEET_ID}/export?format=csv&gid=${SALES_GID}`;
-  const YOMI_URL  = `https://docs.google.com/spreadsheets/d/${SALES_SHEET_ID}/export?format=csv&gid=${YOMI_GID}`;
+  const SALES_SHEET_ID  = '1E3iQ6_jg8ohBJFShs7uRxFR1CtNygSYU7F-u8Qj_0nU';
+  const KPI_SHEET_ID    = '11Y_h32hfgbiz_3BWwV_NIGYJJyxJ5l6SnRB9pS6Iv2g';
+  const SALES_GID       = '588019868';
+  const YOMI_GID        = '291145562';
+  const ACTIVE_GID      = '37414720';
+  const SALES_URL  = `https://docs.google.com/spreadsheets/d/${SALES_SHEET_ID}/export?format=csv&gid=${SALES_GID}`;
+  const YOMI_URL   = `https://docs.google.com/spreadsheets/d/${SALES_SHEET_ID}/export?format=csv&gid=${YOMI_GID}`;
+  const ACTIVE_URL = `https://docs.google.com/spreadsheets/d/${KPI_SHEET_ID}/export?format=csv&gid=${ACTIVE_GID}`;
 
   const tbody = document.getElementById('sales-body');
   const badge = document.getElementById('sales-total-badge');
 
   try {
-    // 両シートを並行取得
-    const [salesResp, yomiResp] = await Promise.all([fetch(SALES_URL), fetch(YOMI_URL)]);
+    // 3シートを並行取得
+    const [salesResp, yomiResp, activeResp] = await Promise.all([fetch(SALES_URL), fetch(YOMI_URL), fetch(ACTIVE_URL)]);
     if (!salesResp.ok) throw new Error('承諾シート取得失敗');
     if (!yomiResp.ok)  throw new Error('ヨミ表シート取得失敗');
-    const [text, yomiText] = await Promise.all([salesResp.text(), yomiResp.text()]);
+    const [text, yomiText, activeText] = await Promise.all([salesResp.text(), yomiResp.text(), activeResp.ok ? activeResp.text() : Promise.resolve('')]);
 
     // CSVパース
     function parseCSVSimple(t) {
@@ -1387,6 +1391,32 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
       }
     }
 
+    // ---- アクティブ人数パース（ＣＡ行セクションから）----
+    const activeMap = {};
+    if (activeText) {
+      const activeRows = parseCSVSimple(activeText);
+      // 「ＣＡ」列かつ「アクティブ」列があるヘッダー行を探す
+      let activeHeaderIdx = -1, caColIdx = -1, activeColIdx = -1;
+      for (let i = 0; i < activeRows.length; i++) {
+        const r = activeRows[i];
+        const caIdx  = r.findIndex(c => c.trim() === 'ＣＡ' || c.trim() === 'CA');
+        const actIdx = r.findIndex(c => c.trim() === 'アクティブ');
+        if (caIdx !== -1 && actIdx !== -1) {
+          activeHeaderIdx = i; caColIdx = caIdx; activeColIdx = actIdx;
+          break;
+        }
+      }
+      if (activeHeaderIdx !== -1) {
+        for (let i = activeHeaderIdx + 1; i < activeRows.length; i++) {
+          const r = activeRows[i];
+          const name = (r[caColIdx] || '').trim();
+          const cnt  = parseInt((r[activeColIdx] || '').replace(/[^0-9]/g, ''), 10);
+          if (!name || name === '合計' || isNaN(cnt)) continue;
+          activeMap[name] = cnt;
+        }
+      }
+    }
+
     // 承諾実績 + ヨミ表のアドバイザーをマージ
     Object.keys(yomiMap).forEach(adv => {
       if (!advisorMap[adv]) advisorMap[adv] = { count: 0, total: 0 };
@@ -1440,18 +1470,24 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
     const yomiSorted = Object.entries(yomiMap).sort((a, b) => b[1] - a[1]);
 
     if (yomiSorted.length === 0) {
-      yomiTbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-secondary);padding:20px;">データなし</td></tr>';
+      yomiTbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-secondary);padding:20px;">データなし</td></tr>';
       yomiBadge.textContent = '0人';
     } else {
+      const grandActive = Object.values(activeMap).reduce((s, v) => s + v, 0);
       yomiTbody.innerHTML = yomiSorted.map(([name, n]) => {
-        const isRed = n <= 6;
+        const isRed     = n <= 6;
         const numStyle  = isRed ? 'color:#e05252;font-weight:900;font-size:22px;' : 'font-weight:900;font-size:22px;color:var(--accent);';
         const statusBg  = isRed ? 'background:#fee2e2;color:#991b1b;' : 'background:#d1fae5;color:#065f46;';
         const statusTxt = isRed ? '⚠️ 要補充（6人以下）' : '✅ 良好';
+        const activeCnt = activeMap[name];
+        const activeDisp = activeCnt !== undefined
+          ? `<span style="font-weight:900;font-size:22px;color:#6366f1;">${activeCnt}</span><span class="sales-unit">人</span>`
+          : `<span style="color:var(--text-secondary);font-size:13px;">—</span>`;
         return `
           <tr>
             <td style="font-weight:700;">${name}</td>
             <td><span style="${numStyle}">${n}</span><span class="sales-unit">人</span></td>
+            <td>${activeDisp}</td>
             <td><span style="display:inline-block;padding:4px 14px;border-radius:99px;font-size:12px;font-weight:700;${statusBg}">${statusTxt}</span></td>
           </tr>
         `;
@@ -1459,6 +1495,7 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
         <tr class="sales-total">
           <td>合計</td>
           <td><span style="font-size:22px;font-weight:900;">${grandYomi}</span><span class="sales-unit">人</span></td>
+          <td><span style="font-size:22px;font-weight:900;color:#6366f1;">${grandActive || '—'}</span>${grandActive ? '<span class="sales-unit">人</span>' : ''}</td>
           <td>—</td>
         </tr>
       `;
@@ -1467,6 +1504,7 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
 
   } catch (e) {
     document.getElementById('sales-body').innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-secondary);padding:20px;">データ取得失敗: ${e.message}</td></tr>`;
+    document.getElementById('yomi-body').innerHTML  = `<tr><td colspan="4" style="text-align:center;color:var(--text-secondary);padding:20px;">データ取得失敗: ${e.message}</td></tr>`;
     document.getElementById('sales-total-badge').textContent = 'エラー';
   }
 })();
