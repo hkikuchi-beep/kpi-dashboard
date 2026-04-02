@@ -665,11 +665,14 @@ function buildMonthSelector(months, personsData) {
     sel.appendChild(opt);
   });
   if (months.length > 0) {
+    const toNum = m => parseInt(m.replace('月', '')) || 0;
     const nowMonth = new Date().getMonth() + 1;
-    const currentLabel = `${nowMonth}月`;
-    const defaultMonth = months.includes(currentLabel)
-      ? currentLabel
-      : months[months.length - 1];
+    const exact = months.find(m => toNum(m) === nowMonth);
+    const pastMonths = months.filter(m => toNum(m) <= nowMonth);
+    const nearest = pastMonths.length > 0
+      ? pastMonths.reduce((a, b) => toNum(a) >= toNum(b) ? a : b)
+      : null;
+    const defaultMonth = exact || nearest || months[0];
     sel.value = defaultMonth;
     renderWeeklyReport(personsData, sel.value);
   }

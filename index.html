@@ -1099,12 +1099,20 @@ function buildMonthSelector(months, personsData) {
     sel.appendChild(opt);
   });
   if (months.length > 0) {
-    // 今月（カレンダー）に一致する月を優先して選択
-    const nowMonth = new Date().getMonth() + 1; // 1〜12
-    const currentLabel = `${nowMonth}月`;
-    const defaultMonth = months.includes(currentLabel)
-      ? currentLabel
-      : months[months.length - 1]; // 今月データがなければ最新月
+    // 月ラベルから数値取得（全角→半角変換済みの前提）
+    const toNum = m => parseInt(m.replace('月', '')) || 0;
+    const nowMonth = new Date().getMonth() + 1; // 1〜12（今月）
+
+    // ① 今月と完全一致
+    const exact = months.find(m => toNum(m) === nowMonth);
+    // ② 今月以前で最も近い月（例：今月が4月なら3月が候補）
+    const pastMonths = months.filter(m => toNum(m) <= nowMonth);
+    const nearest = pastMonths.length > 0
+      ? pastMonths.reduce((a, b) => toNum(a) >= toNum(b) ? a : b)
+      : null;
+    // ③ すべて未来月なら最初の月
+    const defaultMonth = exact || nearest || months[0];
+
     sel.value = defaultMonth;
     renderDashboard(personsData, sel.value);
   }
