@@ -1492,24 +1492,31 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
       const yomiAvg = yomiSorted.length > 0 ? grandYomi / yomiSorted.length : 0;
 
       yomiTbody.innerHTML = yomiSorted.map(([name, n]) => {
+        const isDanger   = n <= 5;
         const isBelowAvg = n < yomiAvg;
-        const rowBg    = isBelowAvg ? 'background:#fffbeb;' : '';
-        const numStyle = isBelowAvg
-          ? 'color:#d97706;font-weight:900;font-size:22px;'
-          : 'font-weight:900;font-size:22px;color:var(--accent);';
-        const statusBg = isBelowAvg
-          ? 'background:#fef3c7;color:#92400e;'
-          : 'background:#d1fae5;color:#065f46;';
-        const statusTxt = isBelowAvg ? '📉 平均以下' : '✅ 良好';
+        // 行背景：危険 > 平均以下
+        const rowBg    = isDanger   ? 'background:#fff1f1;'
+                       : isBelowAvg ? 'background:#fffbeb;' : '';
+        // 人数の色
+        const numStyle = isDanger   ? 'color:#dc2626;font-weight:900;font-size:22px;'
+                       : isBelowAvg ? 'color:#d97706;font-weight:900;font-size:22px;'
+                       : 'font-weight:900;font-size:22px;color:var(--accent);';
+        // ステータスバッジ
+        const statusBg  = isDanger   ? 'background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;'
+                        : isBelowAvg ? 'background:#fef3c7;color:#92400e;'
+                        : 'background:#d1fae5;color:#065f46;';
+        const statusTxt = isDanger   ? '🚨 危険（5人以下）'
+                        : isBelowAvg ? '📉 平均以下'
+                        : '✅ 良好';
         const activeCnt = activeMap[name];
         const activeDisp = activeCnt !== undefined
           ? `<span style="font-weight:900;font-size:22px;color:#6366f1;">${activeCnt}</span><span class="sales-unit">人</span>`
           : `<span style="color:var(--text-secondary);font-size:13px;">—</span>`;
         return `
           <tr style="${rowBg}">
-            <td style="font-weight:700;">${name}</td>
+            <td style="font-weight:700;">${isDanger ? '🚨 ' : ''}${name}</td>
             <td><span style="${numStyle}">${n}</span><span class="sales-unit">人</span>
-              ${isBelowAvg ? `<span style="font-size:10px;color:#d97706;margin-left:4px;">平均${Math.round(yomiAvg)}人</span>` : ''}
+              ${isBelowAvg && !isDanger ? `<span style="font-size:10px;color:#d97706;margin-left:4px;">平均${Math.round(yomiAvg)}人</span>` : ''}
             </td>
             <td>${activeDisp}</td>
             <td><span style="display:inline-block;padding:4px 14px;border-radius:99px;font-size:12px;font-weight:700;${statusBg}">${statusTxt}</span></td>
