@@ -1509,7 +1509,7 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
           <tr style="${rowBg}">
             <td style="font-weight:700;">${name}</td>
             <td><span style="${numStyle}">${n}</span><span class="sales-unit">人</span>
-              ${isBelowAvg && !isRed ? `<span style="font-size:10px;color:#d97706;margin-left:4px;">平均${Math.round(yomiAvg)}人</span>` : ''}
+              ${isBelowAvg ? `<span style="font-size:10px;color:#d97706;margin-left:4px;">平均${Math.round(yomiAvg)}人</span>` : ''}
             </td>
             <td>${activeDisp}</td>
             <td><span style="display:inline-block;padding:4px 14px;border-radius:99px;font-size:12px;font-weight:700;${statusBg}">${statusTxt}</span></td>
