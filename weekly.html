@@ -665,7 +665,12 @@ function buildMonthSelector(months, personsData) {
     sel.appendChild(opt);
   });
   if (months.length > 0) {
-    sel.value = months[months.length - 1];
+    const nowMonth = new Date().getMonth() + 1;
+    const currentLabel = `${nowMonth}月`;
+    const defaultMonth = months.includes(currentLabel)
+      ? currentLabel
+      : months[months.length - 1];
+    sel.value = defaultMonth;
     renderWeeklyReport(personsData, sel.value);
   }
   sel.addEventListener('change', () => renderWeeklyReport(personsData, sel.value));

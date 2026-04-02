@@ -1099,7 +1099,13 @@ function buildMonthSelector(months, personsData) {
     sel.appendChild(opt);
   });
   if (months.length > 0) {
-    sel.value = months[months.length - 1];
+    // 今月（カレンダー）に一致する月を優先して選択
+    const nowMonth = new Date().getMonth() + 1; // 1〜12
+    const currentLabel = `${nowMonth}月`;
+    const defaultMonth = months.includes(currentLabel)
+      ? currentLabel
+      : months[months.length - 1]; // 今月データがなければ最新月
+    sel.value = defaultMonth;
     renderDashboard(personsData, sel.value);
   }
   sel.addEventListener('change', () => renderDashboard(personsData, sel.value));
