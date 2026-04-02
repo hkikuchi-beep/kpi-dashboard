@@ -1488,19 +1488,39 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
       yomiBadge.textContent = '0人';
     } else {
       const grandActive = Object.values(activeMap).reduce((s, v) => s + v, 0);
+      // 平均人数（合計÷アドバイザー数）
+      const yomiAvg = yomiSorted.length > 0 ? grandYomi / yomiSorted.length : 0;
+
       yomiTbody.innerHTML = yomiSorted.map(([name, n]) => {
-        const isRed     = n <= 6;
-        const numStyle  = isRed ? 'color:#e05252;font-weight:900;font-size:22px;' : 'font-weight:900;font-size:22px;color:var(--accent);';
-        const statusBg  = isRed ? 'background:#fee2e2;color:#991b1b;' : 'background:#d1fae5;color:#065f46;';
-        const statusTxt = isRed ? '⚠️ 要補充（6人以下）' : '✅ 良好';
+        const isRed      = n <= 6;
+        const isBelowAvg = n < yomiAvg;
+        // 行の背景：平均以下は黄色
+        const rowBg      = isRed ? 'background:#fff7f7;' : isBelowAvg ? 'background:#fffbeb;' : '';
+        const numStyle   = isRed
+          ? 'color:#e05252;font-weight:900;font-size:22px;'
+          : isBelowAvg
+            ? 'color:#d97706;font-weight:900;font-size:22px;'
+            : 'font-weight:900;font-size:22px;color:var(--accent);';
+        const statusBg   = isRed
+          ? 'background:#fee2e2;color:#991b1b;'
+          : isBelowAvg
+            ? 'background:#fef3c7;color:#92400e;'
+            : 'background:#d1fae5;color:#065f46;';
+        const statusTxt  = isRed
+          ? '⚠️ 要補充（6人以下）'
+          : isBelowAvg
+            ? '📉 平均以下'
+            : '✅ 良好';
         const activeCnt = activeMap[name];
         const activeDisp = activeCnt !== undefined
           ? `<span style="font-weight:900;font-size:22px;color:#6366f1;">${activeCnt}</span><span class="sales-unit">人</span>`
           : `<span style="color:var(--text-secondary);font-size:13px;">—</span>`;
         return `
-          <tr>
+          <tr style="${rowBg}">
             <td style="font-weight:700;">${name}</td>
-            <td><span style="${numStyle}">${n}</span><span class="sales-unit">人</span></td>
+            <td><span style="${numStyle}">${n}</span><span class="sales-unit">人</span>
+              ${isBelowAvg && !isRed ? `<span style="font-size:10px;color:#d97706;margin-left:4px;">平均${Math.round(yomiAvg)}人</span>` : ''}
+            </td>
             <td>${activeDisp}</td>
             <td><span style="display:inline-block;padding:4px 14px;border-radius:99px;font-size:12px;font-weight:700;${statusBg}">${statusTxt}</span></td>
           </tr>
