@@ -1367,7 +1367,8 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
     for (let i = headerIdx + 1; i < rows.length; i++) {
       const r = rows[i];
       const advisor = (r[nameColIdx] || '').trim();
-      if (!advisor || SKIP_NAMES.has(advisor)) continue;
+      if (!advisor) break;  // 集計セクション終了（空行）
+      if (SKIP_NAMES.has(advisor)) continue;
       const count  = parseInt(r[count27ColIdx]) || 0;
       const rawAmt = parseFloat((r[amt27ColIdx] || '').replace(/[¥,]/g, '')) || 0;
       if (!advisorMap[advisor]) advisorMap[advisor] = { count: 0, total: 0 };
