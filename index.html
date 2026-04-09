@@ -1399,7 +1399,7 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
         if (!student || !advisor) continue;
         if (phaseKey) {
           const phase = (r[yomiColMap[phaseKey]] || '').trim();
-          if (phase.includes('お見送り')) continue;
+          if (phase.includes('承諾')) continue;
         }
         yomiMap[advisor] = (yomiMap[advisor] || 0) + 1;
       }
