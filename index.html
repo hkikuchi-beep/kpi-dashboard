@@ -1347,35 +1347,32 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
 
     const rows = parseCSVSimple(text);
 
-    // ヘッダー行を探す（「担当」「卒業年度」「承諾/辞退」「金額」が含まれる行）
-    let headerIdx = -1, colMap = {};
+    // ヘッダー行を探す（「承諾人数（27卒）」が含まれる行）
+    let headerIdx = -1, nameColIdx = 0, count27ColIdx = -1, amt27ColIdx = -1;
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
-      if (r.includes('担当') && r.includes('卒業年度') && r.includes('承諾/辞退')) {
+      const c27Idx = r.findIndex(c => c.includes('27卒') && c.includes('承諾人数'));
+      if (c27Idx !== -1) {
         headerIdx = i;
-        r.forEach((h, idx) => {
-          if (h && !(h in colMap)) colMap[h] = idx; // 同名カラムは最初の出現を使う
-        });
+        count27ColIdx = c27Idx;
+        amt27ColIdx = c27Idx + 1;
         break;
       }
     }
     if (headerIdx === -1) throw new Error('ヘッダー行が見つかりません');
 
-    // 27卒 & 承諾 のデータを抽出してアドバイザー別に集計
+    // アドバイザー別に27卒承諾人数・金額を集計
     const advisorMap = {};
+    const SKIP_NAMES = new Set(['菊池', '合計', 'Total', '合　計']);
     for (let i = headerIdx + 1; i < rows.length; i++) {
       const r = rows[i];
-      const nendo   = (r[colMap['卒業年度']] || '').trim();
-      const status  = (r[colMap['承諾/辞退']] || '').trim();
-      const advisor = (r[colMap['担当']] || '').trim();
-      const amtRaw  = (r[colMap['金額']] || '').replace(/[¥,]/g, '').trim();
-      const amt     = parseFloat(amtRaw) || 0;
-
-      if (nendo !== '27卒' || status !== '承諾' || !advisor) continue;
-
+      const advisor = (r[nameColIdx] || '').trim();
+      if (!advisor || SKIP_NAMES.has(advisor)) continue;
+      const count  = parseInt(r[count27ColIdx]) || 0;
+      const rawAmt = parseFloat((r[amt27ColIdx] || '').replace(/[¥,]/g, '')) || 0;
       if (!advisorMap[advisor]) advisorMap[advisor] = { count: 0, total: 0 };
-      advisorMap[advisor].count++;
-      advisorMap[advisor].total += amt;
+      advisorMap[advisor].count += count;
+      advisorMap[advisor].total += rawAmt;
     }
 
     // ---- ヨミ表パース（担当CAごとに人数を集計）----
