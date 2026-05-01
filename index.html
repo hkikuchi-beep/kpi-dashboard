@@ -602,10 +602,10 @@
     </div>
     <div class="hero-card gold">
       <div class="rank">★ 重要KPI</div>
-      <div class="label">内定数</div>
+      <div class="label">最終選考数</div>
       <div class="numbers">
         <div class="result-num" id="hero-naitei-result">-</div>
-        <div class="target-info">目標 <span id="hero-naitei-target">-</span> 件</div>
+        <div class="target-info">目標 <span id="hero-naitei-target">-</span> 人</div>
       </div>
       <div class="progress-bar-wrap">
         <div class="progress-bar" id="pb-naitei" style="width:0%"></div>
@@ -756,8 +756,8 @@ function renderDashboard(personsData, month) {
   const PERSONS = Object.keys(personsData);
 
   // --- Hero cards ---
-  const totNaiteiTarget = sum(personsData, month, '内定数', 'target');
-  const totNaiteiResult = sum(personsData, month, '内定数', 'result');
+  const totNaiteiTarget = sum(personsData, month, '最終参加数', 'target');
+  const totNaiteiResult = sum(personsData, month, '最終参加数', 'result');
   const totNaiteiPct    = pct(totNaiteiResult, totNaiteiTarget);
 
   const tot1jiTarget = sum(personsData, month, '1次選考参加数', 'target');
