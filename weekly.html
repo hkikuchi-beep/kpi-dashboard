@@ -413,12 +413,37 @@ function parseSheetData(csvText) {
 // ======================================================
 // 週次MTGレポート
 // ======================================================
+// 2026年 日本の祝日
+const JAPAN_HOLIDAYS_2026 = new Set([
+  '2026-01-01', // 元日
+  '2026-01-12', // 成人の日
+  '2026-02-11', // 建国記念の日
+  '2026-02-23', // 天皇誕生日
+  '2026-03-20', // 春分の日
+  '2026-04-29', // 昭和の日
+  '2026-05-04', // みどりの日
+  '2026-05-05', // こどもの日
+  '2026-05-06', // 振替休日
+  '2026-07-20', // 海の日
+  '2026-08-11', // 山の日
+  '2026-09-21', // 敬老の日
+  '2026-09-22', // 国民の休日
+  '2026-09-23', // 秋分の日
+  '2026-10-12', // スポーツの日
+  '2026-11-03', // 文化の日
+  '2026-11-23', // 勤労感謝の日
+]);
+
+function toYMD(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
 function getBusinessDays(year, month) {
   const days = [];
   const d = new Date(year, month - 1, 1);
   while (d.getMonth() === month - 1) {
     const dow = d.getDay();
-    if (dow !== 0 && dow !== 6) days.push(new Date(d));
+    if (dow !== 0 && dow !== 6 && !JAPAN_HOLIDAYS_2026.has(toYMD(d))) days.push(new Date(d));
     d.setDate(d.getDate() + 1);
   }
   return days;
