@@ -863,14 +863,14 @@ function renderDashboard(personsData, month) {
       <div class="person-card" style="border-top-color:${PERSON_COLORS[idx % PERSON_COLORS.length]}">
         <h3>${p}</h3>
         <div class="person-kpis">
-          ${kpiHtml('新規面談',         r['新規面談'],         t['新規面談'],         '新規面談',         '', worstKey==='新規面談')}
-          ${kpiHtml('提案数',           r['提案数'],           t['提案数'],           '提案数',           '', worstKey==='提案数')}
-          ${kpiHtml('応募承諾数',       r['応募承諾数'],       t['応募承諾数'],       '応募承諾数',       '', worstKey==='応募承諾数')}
-          ${kpiHtml('説明会参加',       r['説明会参加済み'],   t['説明会参加済み'],   '説明会参加済み',   '', worstKey==='説明会参加済み')}
-          ${kpiHtml('◆ 1次選考参加数', r['1次選考参加数'],   t['1次選考参加数'],   '1次選考参加数',   'highlight2', worstKey==='1次選考参加数')}
-          ${kpiHtml('最終参加数',       r['最終参加数'],       t['最終参加数'],       '最終参加数',       '', worstKey==='最終参加数')}
-          ${kpiHtml('★ 内定数',        r['内定数'],          t['内定数'],          '内定数',          'highlight',  worstKey==='内定数')}
-          ${kpiHtml('🥇 内定承諾数',    r['内定承諾数'],      t['内定承諾数'],      '内定承諾数',      'highlight-gold', worstKey==='内定承諾数')}
+          ${kpiHtml('新規面談',         r['新規面談']         ?? 0, t['新規面談']         ?? 0, '新規面談',         '', worstKey==='新規面談')}
+          ${kpiHtml('提案数',           r['提案数']           ?? 0, t['提案数']           ?? 0, '提案数',           '', worstKey==='提案数')}
+          ${kpiHtml('応募承諾数',       r['応募承諾数']       ?? 0, t['応募承諾数']       ?? 0, '応募承諾数',       '', worstKey==='応募承諾数')}
+          ${kpiHtml('説明会参加',       r['説明会参加済み']   ?? 0, t['説明会参加済み']   ?? 0, '説明会参加済み',   '', worstKey==='説明会参加済み')}
+          ${kpiHtml('◆ 1次選考参加数', r['1次選考参加数']   ?? 0, t['1次選考参加数']   ?? 0, '1次選考参加数',   'highlight2', worstKey==='1次選考参加数')}
+          ${kpiHtml('最終参加数',       r['最終参加数']       ?? 0, t['最終参加数']       ?? 0, '最終参加数',       '', worstKey==='最終参加数')}
+          ${kpiHtml('★ 内定数',        r['内定数']          ?? 0, t['内定数']          ?? 0, '内定数',          'highlight',  worstKey==='内定数')}
+          ${kpiHtml('🥇 内定承諾数',    r['内定承諾数']      ?? 0, t['内定承諾数']      ?? 0, '内定承諾数',      'highlight-gold', worstKey==='内定承諾数')}
         </div>
       </div>`;
   });
@@ -1147,7 +1147,7 @@ const GID      = '1288413773';
 const CSV_URL  = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`;
 
 // ダッシュボードに表示する担当者（表示順）
-const PERSONS_LIST = ['渡辺', '田中', '永田', '志村'];
+const PERSONS_LIST = ['渡辺', '田中', '永田', '志村', '横山'];
 
 // パーサーが「担当者名ではない」と判断するパターン
 // → これ以外の空でないcol0はすべて担当者名として扱う
@@ -1206,6 +1206,8 @@ const HEADER_ALIASES = {
   '最終参加数':     '最終参加数',
   '内定数':         '内定数',
   '内定承諾数':     '内定承諾数',
+  '承諾数':         '内定承諾数',  // 横山シート表記ゆれ対応
+  '内定承諾':       '内定承諾数',  // 横山6月シート表記ゆれ対応
 };
 
 function parseSheetData(csvText) {
