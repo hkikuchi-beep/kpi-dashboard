@@ -538,6 +538,7 @@
               <th>承諾数</th>
               <th>売上（万円）</th>
               <th>平均単価（万円）</th>
+              <th>生産性（万円/面談）</th>
               <th style="width:160px;">売上割合</th>
             </tr>
           </thead>
@@ -1408,18 +1409,20 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
       }
     }
 
-    // ---- アクティブ人数パース（ＣＡ行セクションから）----
+    // ---- アクティブ人数・面談数パース（ＣＡ行セクションから）----
     const activeMap = {};
+    const meetingMap = {}; // 着座数（面談数）
     if (activeText) {
       const activeRows = parseCSVSimple(activeText);
       // 「ＣＡ」列かつ「アクティブ」列があるヘッダー行を探す
-      let activeHeaderIdx = -1, caColIdx = -1, activeColIdx = -1;
+      let activeHeaderIdx = -1, caColIdx = -1, activeColIdx = -1, meetingColIdx = -1;
       for (let i = 0; i < activeRows.length; i++) {
         const r = activeRows[i];
         const caIdx  = r.findIndex(c => c.trim() === 'ＣＡ' || c.trim() === 'CA');
         const actIdx = r.findIndex(c => c.trim() === 'アクティブ');
         if (caIdx !== -1 && actIdx !== -1) {
           activeHeaderIdx = i; caColIdx = caIdx; activeColIdx = actIdx;
+          meetingColIdx = r.findIndex(c => c.trim() === '着座数');
           break;
         }
       }
@@ -1430,6 +1433,10 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
           const cnt  = parseInt((r[activeColIdx] || '').replace(/[^0-9]/g, ''), 10);
           if (!name || name === '合計' || isNaN(cnt)) continue;
           activeMap[name] = cnt;
+          if (meetingColIdx !== -1) {
+            const meetings = parseInt((r[meetingColIdx] || '').replace(/[^0-9]/g, ''), 10);
+            if (!isNaN(meetings)) meetingMap[name] = meetings;
+          }
         }
       }
     }
@@ -1447,13 +1454,19 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
     const sorted = Object.entries(advisorMap).sort((a, b) => b[1].total - a[1].total);
 
     if (sorted.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-secondary);padding:20px;">27卒承諾データなし</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);padding:20px;">27卒承諾データなし</td></tr>';
       badge.textContent = '0件';
     } else {
       // 承諾実績テーブル描画
       const toMan  = v => (v / 10000).toFixed(0);
       const avgMan = (total, count) => count ? (total / count / 10000).toFixed(0) : '0';
       const barPct = total => grandTotal ? Math.round((total / grandTotal) * 100) : 0;
+      const productivity = (total, name) => {
+        const meetings = meetingMap[name];
+        if (!meetings || meetings === 0) return '—';
+        return (total / 10000 / meetings).toFixed(1);
+      };
+      const grandMeetings = Object.values(meetingMap).reduce((s, v) => s + v, 0);
 
       tbody.innerHTML = sorted.map(([name, d]) => `
         <tr>
@@ -1461,6 +1474,7 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
           <td><span class="sales-count">${d.count}</span><span class="sales-unit">件</span></td>
           <td><span class="sales-amount">${toMan(d.total)}</span><span class="sales-unit">万円</span></td>
           <td>${avgMan(d.total, d.count)} 万円</td>
+          <td style="font-weight:600;color:var(--accent-dk);">${productivity(d.total, name)} <span style="font-size:11px;font-weight:400;color:var(--text-secondary);">万円/面談</span></td>
           <td>
             <div style="font-size:11px;color:var(--text-secondary);margin-bottom:3px;">${barPct(d.total)}%</div>
             <div class="sales-bar-bg"><div class="sales-bar-fill" style="width:${barPct(d.total)}%"></div></div>
@@ -1472,6 +1486,7 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
           <td><span class="sales-count">${grandCount}</span><span class="sales-unit">件</span></td>
           <td><span class="sales-amount">${toMan(grandTotal)}</span><span class="sales-unit">万円</span></td>
           <td>${avgMan(grandTotal, grandCount)} 万円</td>
+          <td style="font-weight:600;">${grandMeetings > 0 ? (grandTotal / 10000 / grandMeetings).toFixed(1) : '—'} <span style="font-size:11px;font-weight:400;color:var(--text-secondary);">万円/面談</span></td>
           <td>—</td>
         </tr>
       `;
