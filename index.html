@@ -441,35 +441,112 @@
     }
 
     /* ── 当月売上バナー ── */
+    /* ── 売上バナー（プレミアムリデザイン）── */
     #revenue-banner {
-      background: linear-gradient(135deg, #0d6e47 0%, #18a572 60%, #22c98a 100%);
-      border-radius: 16px;
-      padding: 22px 28px;
+      background: #060f0b;
+      border-radius: 20px;
       margin-bottom: 24px;
-      box-shadow: 0 4px 20px rgba(15,122,84,0.25);
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 0 0 1px rgba(0,220,110,0.12), 0 16px 48px rgba(0,0,0,0.35), 0 2px 0 rgba(0,220,110,0.2);
+    }
+    #revenue-banner::before {
+      content: '';
+      position: absolute;
+      top: -80px; right: -80px;
+      width: 280px; height: 280px;
+      background: radial-gradient(circle, rgba(0,220,110,0.18) 0%, transparent 65%);
+      pointer-events: none;
+    }
+    #revenue-banner::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        repeating-linear-gradient(0deg, transparent, transparent 28px, rgba(255,255,255,0.02) 28px, rgba(255,255,255,0.02) 29px),
+        repeating-linear-gradient(90deg, transparent, transparent 28px, rgba(255,255,255,0.02) 28px, rgba(255,255,255,0.02) 29px);
+      pointer-events: none;
+    }
+    .rvb-inner {
       display: flex;
       align-items: center;
-      gap: 24px;
-      flex-wrap: wrap;
-      color: #fff;
+      justify-content: space-between;
+      padding: 28px 36px;
+      position: relative;
+      z-index: 1;
     }
-    .rev-label { font-size: 12px; font-weight: 600; opacity: 0.8; letter-spacing: 0.4px; margin-bottom: 4px; }
-    .rev-amount { font-size: 38px; font-weight: 800; line-height: 1; letter-spacing: -1px; }
-    .rev-unit { font-size: 16px; font-weight: 600; opacity: 0.85; margin-left: 3px; }
-    .rev-divider { width: 1px; height: 44px; background: rgba(255,255,255,0.3); flex-shrink: 0; }
-    .rev-target-block { display: flex; flex-direction: column; gap: 2px; }
-    .rev-target-label { font-size: 11px; opacity: 0.75; }
-    .rev-target-val { font-size: 22px; font-weight: 700; }
-    .rev-achieve { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
-    .rev-pct { font-size: 32px; font-weight: 800; letter-spacing: -0.5px; }
-    .rev-pct-label { font-size: 11px; opacity: 0.75; margin-top: -6px; }
-    .rev-bar-wrap { width: 160px; height: 6px; background: rgba(255,255,255,0.25); border-radius: 99px; overflow: hidden; }
-    .rev-bar-fill { height: 100%; border-radius: 99px; background: #fff; transition: width 1s cubic-bezier(0.22,1,0.36,1); }
-    @media (max-width: 600px) {
-      #revenue-banner { padding: 16px 18px; gap: 14px; }
-      .rev-amount { font-size: 28px; }
-      .rev-achieve { margin-left: 0; width: 100%; flex-direction: row; align-items: center; justify-content: space-between; }
-      .rev-bar-wrap { width: 100px; }
+    .rvb-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #00dc6e;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+    .rvb-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #00dc6e;
+      box-shadow: 0 0 10px #00dc6e;
+      animation: rvb-pulse 2.4s ease-in-out infinite;
+    }
+    @keyframes rvb-pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 10px #00dc6e; }
+      50%       { opacity: 0.45; box-shadow: 0 0 4px #00dc6e; }
+    }
+    .rvb-sep { opacity: 0.25; font-weight: 300; }
+    .rvb-figure {
+      display: flex;
+      align-items: baseline;
+      gap: 0;
+      line-height: 1;
+    }
+    .rvb-yen {
+      font-size: 20px;
+      font-weight: 300;
+      color: rgba(255,255,255,0.35);
+      margin-right: 6px;
+      letter-spacing: -0.5px;
+    }
+    .rvb-num {
+      font-size: 64px;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -3px;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+    .rvb-unit {
+      font-size: 24px;
+      font-weight: 400;
+      color: rgba(255,255,255,0.4);
+      margin-left: 6px;
+      letter-spacing: 0;
+    }
+    .rvb-sub {
+      font-size: 10px;
+      color: rgba(255,255,255,0.2);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-top: 12px;
+    }
+    .rvb-deco {
+      flex-shrink: 0;
+      width: 96px; height: 96px;
+      opacity: 0.55;
+    }
+    .rvb-deco svg { animation: rvb-spin 24s linear infinite; }
+    @keyframes rvb-spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+    @media (max-width: 640px) {
+      .rvb-inner { padding: 22px 22px; }
+      .rvb-num { font-size: 46px; }
+      .rvb-deco { display: none; }
     }
   </style>
 </head>
@@ -557,9 +634,35 @@
 
   <!-- 売上バナー -->
   <div id="revenue-banner" class="fade-up">
-    <div>
-      <div class="rev-label">💰 <span id="banner-month-label">当月</span>売上（27卒 承諾実績）</div>
-      <div class="rev-amount"><span id="banner-result">-</span><span class="rev-unit">万円</span></div>
+    <div class="rvb-inner">
+      <div>
+        <div class="rvb-badge">
+          <span class="rvb-dot"></span>
+          <span id="banner-month-label">当月</span>
+          <span class="rvb-sep">|</span>
+          <span>27卒 承諾実績</span>
+        </div>
+        <div class="rvb-figure">
+          <span class="rvb-yen">¥</span>
+          <span class="rvb-num" id="banner-result">-</span>
+          <span class="rvb-unit">万円</span>
+        </div>
+        <div class="rvb-sub">Monthly Revenue · VINC新卒エージェント</div>
+      </div>
+      <div class="rvb-deco" aria-hidden="true">
+        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="50" cy="50" r="44" stroke="rgba(0,220,110,0.15)" stroke-width="0.8"/>
+          <circle cx="50" cy="50" r="34" stroke="rgba(0,220,110,0.22)" stroke-width="0.8"/>
+          <circle cx="50" cy="50" r="24" stroke="rgba(0,220,110,0.30)" stroke-width="0.8"/>
+          <circle cx="50" cy="50" r="14" stroke="rgba(0,220,110,0.40)" stroke-width="0.8"/>
+          <circle cx="50" cy="50" r="5" fill="rgba(0,220,110,0.25)"/>
+          <circle cx="50" cy="50" r="2.5" fill="#00dc6e"/>
+          <line x1="50" y1="6" x2="50" y2="14" stroke="rgba(0,220,110,0.4)" stroke-width="0.8"/>
+          <line x1="50" y1="86" x2="50" y2="94" stroke="rgba(0,220,110,0.4)" stroke-width="0.8"/>
+          <line x1="6" y1="50" x2="14" y2="50" stroke="rgba(0,220,110,0.4)" stroke-width="0.8"/>
+          <line x1="86" y1="50" x2="94" y2="50" stroke="rgba(0,220,110,0.4)" stroke-width="0.8"/>
+        </svg>
+      </div>
     </div>
   </div>
 
