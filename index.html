@@ -558,7 +558,7 @@
   <!-- 売上バナー -->
   <div id="revenue-banner" class="fade-up">
     <div>
-      <div class="rev-label">💰 27卒 承諾実績 売上合計</div>
+      <div class="rev-label">💰 <span id="banner-month-label">当月</span>売上（27卒 承諾実績）</div>
       <div class="rev-amount"><span id="banner-result">-</span><span class="rev-unit">万円</span></div>
     </div>
   </div>
@@ -795,6 +795,15 @@ function sum(personsData, month, field, type) {
 // ======================================================
 function renderDashboard(personsData, month) {
   const PERSONS = Object.keys(personsData);
+
+  // --- Revenue banner（月変更時に同期）---
+  if (window._salesByMonth) {
+    const amt = window._salesByMonth[month] || 0;
+    const el = document.getElementById('banner-result');
+    if (el) el.textContent = amt ? Math.round(amt / 10000).toLocaleString() : '-';
+    const lbl = document.getElementById('banner-month-label');
+    if (lbl) lbl.textContent = month;
+  }
 
   // --- Hero cards ---
   const totNaiteiTarget = sum(personsData, month, '最終参加数', 'target');
@@ -1471,6 +1480,43 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
       advisorMap[advisor].total += rawAmt;
     }
 
+    // ---- 月別売上計算（詳細行: 着地月 × 金額 × 27卒）----
+    {
+      let dhi = -1, mc = -1, ac2 = -1, ac3 = -1, yc = -1;
+      for (let i = 0; i < rows.length; i++) {
+        const r = rows[i];
+        const mi = r.indexOf('着地月'), ai = r.indexOf('金額'), yi = r.indexOf('卒業年度');
+        if (mi !== -1 && ai !== -1) { dhi = i; mc = mi; ac2 = ai; yc = yi; break; }
+      }
+      const sbm = {};
+      if (dhi !== -1) {
+        const dh = rows[dhi];
+        const sc = dh.findIndex(v => v.includes('承諾') && v.includes('辞退'));
+        for (let i = dhi + 1; i < rows.length; i++) {
+          const r = rows[i];
+          if (!r[0] || isNaN(parseInt(r[0]))) break;
+          const month  = (r[mc] || '').trim();
+          const year   = yc !== -1 ? (r[yc] || '').trim() : '';
+          const status = sc !== -1 ? (r[sc] || '').trim() : '承諾';
+          const amt    = parseFloat((r[ac2] || '').replace(/[¥,]/g, '')) || 0;
+          if (!month || year !== '27卒' || amt === 0) continue;
+          if (status !== '承諾') continue;
+          sbm[month] = (sbm[month] || 0) + amt;
+        }
+      }
+      window._salesByMonth = sbm;
+      // 現在選択中の月でバナーを即時更新
+      const curSel = document.getElementById('monthSelect');
+      if (curSel && curSel.value) {
+        const m = curSel.value;
+        const el = document.getElementById('banner-result');
+        const lbl = document.getElementById('banner-month-label');
+        const amt = sbm[m] || 0;
+        if (el) el.textContent = amt ? Math.round(amt / 10000).toLocaleString() : '-';
+        if (lbl) lbl.textContent = m;
+      }
+    }
+
     // ---- ヨミ表パース（担当CAごとに人数を集計）----
     const yomiMap = {};
     const yomiRows = parseCSVSimple(yomiText);
@@ -1535,11 +1581,9 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
       if (!advisorMap[adv]) advisorMap[adv] = { count: 0, total: 0 };
     });
 
-    // 売上合計（バー描画用 + バナー更新）
+    // 売上合計（バー描画用）
     const grandTotal = Object.values(advisorMap).reduce((s, v) => s + v.total, 0);
     const grandCount = Object.values(advisorMap).reduce((s, v) => s + v.count, 0);
-    const bannerEl = document.getElementById('banner-result');
-    if (bannerEl) bannerEl.textContent = Math.round(grandTotal / 10000).toLocaleString();
 
     // 売上降順でソート
     const sorted = Object.entries(advisorMap).sort((a, b) => b[1].total - a[1].total);
