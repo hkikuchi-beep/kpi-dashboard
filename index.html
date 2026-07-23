@@ -555,23 +555,11 @@
   <div id="sidebar-main">
   <div class="container">
 
-  <!-- 当月売上バナー -->
+  <!-- 売上バナー -->
   <div id="revenue-banner" class="fade-up">
     <div>
-      <div class="rev-label">💰 当月売上（実績）</div>
+      <div class="rev-label">💰 27卒 承諾実績 売上合計</div>
       <div class="rev-amount"><span id="banner-result">-</span><span class="rev-unit">万円</span></div>
-    </div>
-    <div class="rev-divider"></div>
-    <div class="rev-target-block">
-      <div class="rev-target-label">月間目標</div>
-      <div class="rev-target-val"><span id="banner-target">-</span> 万円</div>
-    </div>
-    <div class="rev-achieve">
-      <div class="rev-pct"><span id="banner-pct">- %</span></div>
-      <div class="rev-pct-label">達成率</div>
-      <div class="rev-bar-wrap">
-        <div class="rev-bar-fill" id="banner-bar" style="width:0%"></div>
-      </div>
     </div>
   </div>
 
@@ -807,17 +795,6 @@ function sum(personsData, month, field, type) {
 // ======================================================
 function renderDashboard(personsData, month) {
   const PERSONS = Object.keys(personsData);
-
-  // --- Revenue banner ---
-  const totSalesTarget = sum(personsData, month, '売上', 'target');
-  const totSalesResult = sum(personsData, month, '売上', 'result');
-  const salesPct = totSalesTarget > 0 ? Math.round(totSalesResult / totSalesTarget * 100) : 0;
-  document.getElementById('banner-result').textContent = totSalesResult.toLocaleString();
-  document.getElementById('banner-target').textContent = totSalesTarget.toLocaleString();
-  document.getElementById('banner-pct').textContent    = `${salesPct}%`;
-  setTimeout(() => {
-    document.getElementById('banner-bar').style.width = Math.min(100, salesPct) + '%';
-  }, 100);
 
   // --- Hero cards ---
   const totNaiteiTarget = sum(personsData, month, '最終参加数', 'target');
@@ -1481,7 +1458,7 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
 
     // アドバイザー別に27卒承諾人数・金額を集計
     const advisorMap = {};
-    const SKIP_NAMES = new Set(['菊池', '合計', 'Total', '合　計']);
+    const SKIP_NAMES = new Set(['合計', 'Total', '合　計']);
     for (let i = headerIdx + 1; i < rows.length; i++) {
       const r = rows[i];
       const advisor = (r[nameColIdx] || '').trim();
@@ -1558,9 +1535,11 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
       if (!advisorMap[adv]) advisorMap[adv] = { count: 0, total: 0 };
     });
 
-    // 売上合計（バー描画用）
+    // 売上合計（バー描画用 + バナー更新）
     const grandTotal = Object.values(advisorMap).reduce((s, v) => s + v.total, 0);
     const grandCount = Object.values(advisorMap).reduce((s, v) => s + v.count, 0);
+    const bannerEl = document.getElementById('banner-result');
+    if (bannerEl) bannerEl.textContent = Math.round(grandTotal / 10000).toLocaleString();
 
     // 売上降順でソート
     const sorted = Object.entries(advisorMap).sort((a, b) => b[1].total - a[1].total);
