@@ -439,6 +439,38 @@
       .podium-card, .podium-base { width: 110px; }
       #sidebar { display: none; }
     }
+
+    /* ── 当月売上バナー ── */
+    #revenue-banner {
+      background: linear-gradient(135deg, #0d6e47 0%, #18a572 60%, #22c98a 100%);
+      border-radius: 16px;
+      padding: 22px 28px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 20px rgba(15,122,84,0.25);
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      flex-wrap: wrap;
+      color: #fff;
+    }
+    .rev-label { font-size: 12px; font-weight: 600; opacity: 0.8; letter-spacing: 0.4px; margin-bottom: 4px; }
+    .rev-amount { font-size: 38px; font-weight: 800; line-height: 1; letter-spacing: -1px; }
+    .rev-unit { font-size: 16px; font-weight: 600; opacity: 0.85; margin-left: 3px; }
+    .rev-divider { width: 1px; height: 44px; background: rgba(255,255,255,0.3); flex-shrink: 0; }
+    .rev-target-block { display: flex; flex-direction: column; gap: 2px; }
+    .rev-target-label { font-size: 11px; opacity: 0.75; }
+    .rev-target-val { font-size: 22px; font-weight: 700; }
+    .rev-achieve { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+    .rev-pct { font-size: 32px; font-weight: 800; letter-spacing: -0.5px; }
+    .rev-pct-label { font-size: 11px; opacity: 0.75; margin-top: -6px; }
+    .rev-bar-wrap { width: 160px; height: 6px; background: rgba(255,255,255,0.25); border-radius: 99px; overflow: hidden; }
+    .rev-bar-fill { height: 100%; border-radius: 99px; background: #fff; transition: width 1s cubic-bezier(0.22,1,0.36,1); }
+    @media (max-width: 600px) {
+      #revenue-banner { padding: 16px 18px; gap: 14px; }
+      .rev-amount { font-size: 28px; }
+      .rev-achieve { margin-left: 0; width: 100%; flex-direction: row; align-items: center; justify-content: space-between; }
+      .rev-bar-wrap { width: 100px; }
+    }
   </style>
 </head>
 <body>
@@ -522,6 +554,26 @@
 
   <div id="sidebar-main">
   <div class="container">
+
+  <!-- 当月売上バナー -->
+  <div id="revenue-banner" class="fade-up">
+    <div>
+      <div class="rev-label">💰 当月売上（実績）</div>
+      <div class="rev-amount"><span id="banner-result">-</span><span class="rev-unit">万円</span></div>
+    </div>
+    <div class="rev-divider"></div>
+    <div class="rev-target-block">
+      <div class="rev-target-label">月間目標</div>
+      <div class="rev-target-val"><span id="banner-target">-</span> 万円</div>
+    </div>
+    <div class="rev-achieve">
+      <div class="rev-pct"><span id="banner-pct">- %</span></div>
+      <div class="rev-pct-label">達成率</div>
+      <div class="rev-bar-wrap">
+        <div class="rev-bar-fill" id="banner-bar" style="width:0%"></div>
+      </div>
+    </div>
+  </div>
 
   <!-- 27卒 承諾実績 -->
   <div id="section-27" class="section">
@@ -756,6 +808,17 @@ function sum(personsData, month, field, type) {
 function renderDashboard(personsData, month) {
   const PERSONS = Object.keys(personsData);
 
+  // --- Revenue banner ---
+  const totSalesTarget = sum(personsData, month, '売上', 'target');
+  const totSalesResult = sum(personsData, month, '売上', 'result');
+  const salesPct = totSalesTarget > 0 ? Math.round(totSalesResult / totSalesTarget * 100) : 0;
+  document.getElementById('banner-result').textContent = totSalesResult.toLocaleString();
+  document.getElementById('banner-target').textContent = totSalesTarget.toLocaleString();
+  document.getElementById('banner-pct').textContent    = `${salesPct}%`;
+  setTimeout(() => {
+    document.getElementById('banner-bar').style.width = Math.min(100, salesPct) + '%';
+  }, 100);
+
   // --- Hero cards ---
   const totNaiteiTarget = sum(personsData, month, '最終参加数', 'target');
   const totNaiteiResult = sum(personsData, month, '最終参加数', 'result');
@@ -943,30 +1006,78 @@ function renderDashboard(personsData, month) {
 
   const funnelBody = document.getElementById('funnel-body');
   funnelBody.innerHTML = '';
-  let prevResult = null;
 
+  // 各ステージの実績を収集して転換率を計算
+  const funnelRows = [];
+  let prevResult = null;
   funnelStages.forEach(stage => {
     const tVal = sum(personsData, month, stage.key, 'target');
     const rVal = sum(personsData, month, stage.key, 'result');
-    const convRate = prevResult ? ((rVal / prevResult) * 100).toFixed(0) + '%' : '-';
+    const convRateNum = prevResult && prevResult > 0 ? (rVal / prevResult) * 100 : null;
+    funnelRows.push({ stage, tVal, rVal, convRateNum, prevResult });
+    prevResult = rVal;
+  });
+
+  // 転換率が最低のステップを特定してボトルネックとする
+  // ① 転換率が1件以上計算できる場合 → 最低転換率のステップ
+  // ② 全ステップの転換率がnullの場合（実績が少ない月初など）→ 達成率が最低のステップ
+  let bottleneckIdx = -1;
+  const hasConvRates = funnelRows.some(r => r.convRateNum !== null);
+
+  if (hasConvRates) {
+    let minConv = Infinity;
+    funnelRows.forEach((row, i) => {
+      if (row.convRateNum !== null && row.convRateNum < minConv) {
+        minConv = row.convRateNum;
+        bottleneckIdx = i;
+      }
+    });
+  } else {
+    // フォールバック：達成率が最低のステップ（目標が0のステージは除外）
+    let minAchieve = Infinity;
+    funnelRows.forEach((row, i) => {
+      if (row.tVal > 0) {
+        const achieve = row.rVal / row.tVal;
+        if (achieve < minAchieve) {
+          minAchieve = achieve;
+          bottleneckIdx = i;
+        }
+      }
+    });
+  }
+
+  funnelRows.forEach(({ stage, tVal, rVal, convRateNum }, i) => {
+    const convRate = convRateNum !== null ? convRateNum.toFixed(0) + '%' : '-';
     const achievePct = Math.min(100, pct(rVal, tVal));
     const isKey = stage.star;
+    const isBottleneck = i === bottleneckIdx;
+
+    let rowStyle = '';
+    let labelPrefix = '';
+    if (isBottleneck) {
+      rowStyle = 'background:#fff3e0;border-left:4px solid #f57c00;';
+      labelPrefix = '<span style="display:inline-block;font-size:10px;background:#f57c00;color:#fff;border-radius:4px;padding:1px 6px;margin-right:5px;font-weight:700;">⚡ ボトルネック</span>';
+    } else if (isKey) {
+      rowStyle = 'background:#fffde7;font-weight:700;';
+    }
+
+    const convCellStyle = isBottleneck
+      ? 'color:#e65100;font-weight:700;font-size:15px;'
+      : (convRateNum !== null && convRateNum < 50 ? 'color:#c62828;' : '');
 
     funnelBody.innerHTML += `
-      <tr style="${isKey ? 'background:#fffde7;font-weight:700;' : ''}">
-        <td class="stage">${isKey ? '★ ' : ''}${stage.label}</td>
+      <tr style="${rowStyle}">
+        <td class="stage">${labelPrefix}${isKey ? '★ ' : ''}${stage.label}</td>
         <td>${tVal.toLocaleString()}</td>
         <td>${rVal.toLocaleString()}</td>
-        <td>${convRate}</td>
+        <td style="${convCellStyle}">${convRate}</td>
         <td class="funnel-bar-cell">
           <div class="funnel-bar-bg">
-            <div class="funnel-bar-fill" style="width:${achievePct}%"></div>
+            <div class="funnel-bar-fill" style="width:${achievePct}%;${isBottleneck ? 'background:#f57c00;' : ''}"></div>
           </div>
           <div style="font-size:11px;color:#666;margin-top:2px;">${pct(rVal, tVal)}%達成</div>
         </td>
       </tr>`;
-
-    prevResult = rVal;
   });
 
   // --- KPI別ランキング ---
@@ -1209,6 +1320,7 @@ const HEADER_ALIASES = {
   '内定承諾数':     '内定承諾数',
   '承諾数':         '内定承諾数',  // 横山シート表記ゆれ対応
   '内定承諾':       '内定承諾数',  // 横山6月シート表記ゆれ対応
+  '売上':           '売上',
 };
 
 function parseSheetData(csvText) {
