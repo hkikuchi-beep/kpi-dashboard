@@ -597,9 +597,6 @@
     <a class="nav-item" data-target="section-naisho-rank">
       <span class="nav-icon">🏆</span> 承諾ランキング
     </a>
-    <a class="nav-item" data-target="section-yomi">
-      <span class="nav-icon">📋</span> ヨミ表の人数
-    </a>
     <div class="nav-group-label">概要</div>
     <a class="nav-item" data-target="section-hero">
       <span class="nav-icon">⭐</span> 最重要KPI
@@ -685,30 +682,6 @@
     </div>
   </div>
 
-  <!-- ヨミ表の人数 -->
-  <div id="section-yomi" class="section">
-    <div class="sales-section">
-      <div class="sales-section-header">
-        <span class="stitle">📋 ヨミ表の人数（アドバイザー別）</span>
-        <span class="sbadge" id="yomi-total-badge">集計中...</span>
-      </div>
-      <div style="overflow-x:auto;">
-        <table class="sales-table">
-          <thead>
-            <tr>
-              <th>アドバイザー</th>
-              <th>ヨミ表の人数</th>
-              <th>アクティブ人数</th>
-              <th style="width:200px;">ヨミ表状況</th>
-            </tr>
-          </thead>
-          <tbody id="yomi-body">
-            <tr><td colspan="4" style="text-align:center;color:var(--text-secondary);padding:20px;">読み込み中...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
 
   <!-- Hero KPIs -->
   <div id="section-hero" class="hero">
@@ -1283,8 +1256,10 @@ function renderDashboard(personsData, month) {
     const EXCLUDE = new Set(['菊池']);
     const allMonths = PERSONS_LIST.length ? Object.keys(personsData[PERSONS_LIST[0]] || {}) : [];
     const toNum = m => parseInt(m.replace('月', '')) || 0;
+    const curMonthNum = toNum(month);
     const sortedMonths = [...allMonths].sort((a, b) => toNum(a) - toNum(b));
-    const last3 = sortedMonths.slice(-3);
+    const upToCur = sortedMonths.filter(m => toNum(m) <= curMonthNum);
+    const last3 = upToCur.slice(-3);
 
     const rankScores = PERSONS_LIST
       .filter(p => !EXCLUDE.has(p))
@@ -1760,9 +1735,10 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
       badge.textContent = `${grandCount}件 / ${toMan(grandTotal)}万円`;
     }
 
-    // ---- ヨミ表テーブル描画 ----
+    // ---- ヨミ表テーブル描画 ----（セクション削除済みのためスキップ）
     const yomiTbody = document.getElementById('yomi-body');
     const yomiBadge = document.getElementById('yomi-total-badge');
+    if (!yomiTbody) return;
     const grandYomi = Object.values(yomiMap).reduce((s, v) => s + v, 0);
 
     // 全アドバイザーをヨミ表人数の多い順でソート
@@ -1820,7 +1796,6 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
 
   } catch (e) {
     document.getElementById('sales-body').innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-secondary);padding:20px;">データ取得失敗: ${e.message}</td></tr>`;
-    document.getElementById('yomi-body').innerHTML  = `<tr><td colspan="4" style="text-align:center;color:var(--text-secondary);padding:20px;">データ取得失敗: ${e.message}</td></tr>`;
     document.getElementById('sales-total-badge').textContent = 'エラー';
   }
 })();
@@ -1847,7 +1822,7 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
   }
 
   // IntersectionObserver でスクロール位置に応じてハイライト
-  const sectionIds = ['section-27','section-naisho-rank','section-yomi','section-hero','section-persons','section-summary','section-funnel','section-kpi-rank','section-total-rank'];
+  const sectionIds = ['section-27','section-naisho-rank','section-hero','section-persons','section-summary','section-funnel','section-kpi-rank','section-total-rank'];
   const observers = [];
   let currentActive = 'section-hero';
 
