@@ -595,7 +595,10 @@
       <span class="nav-icon">🎓</span> 27卒 承諾実績
     </a>
     <a class="nav-item" data-target="section-naisho-rank">
-      <span class="nav-icon">🏆</span> 承諾ランキング
+      <span class="nav-icon">🏆</span> 承諾ランキング（3ヶ月）
+    </a>
+    <a class="nav-item" data-target="section-naisho-monthly">
+      <span class="nav-icon">📅</span> 承諾ランキング（今月）
     </a>
     <div class="nav-group-label">概要</div>
     <a class="nav-item" data-target="section-hero">
@@ -682,6 +685,18 @@
     </div>
   </div>
 
+  <!-- 今月の内定承諾数ランキング -->
+  <div id="section-naisho-monthly" class="section">
+    <div class="sales-section">
+      <div class="sales-section-header">
+        <span class="stitle">📅 今月の内定承諾数ランキング</span>
+        <span class="sbadge" id="naisho-monthly-badge">集計中...</span>
+      </div>
+      <div class="naisho-rank-row" id="naisho-monthly-row">
+        <div style="color:var(--text-secondary);padding:20px;font-size:13px;">読み込み中...</div>
+      </div>
+    </div>
+  </div>
 
   <!-- Hero KPIs -->
   <div id="section-hero" class="hero">
@@ -1290,6 +1305,35 @@ function renderDashboard(personsData, month) {
     }
   }
 
+  // --- 今月の内定承諾数ランキング ---
+  {
+    const EXCLUDE = new Set(['菊池']);
+    const monthlyScores = PERSONS_LIST
+      .filter(p => !EXCLUDE.has(p))
+      .map(p => {
+        const d = personsData[p]?.[month];
+        return { name: p, total: d?.result?.['内定承諾数'] || 0 };
+      })
+      .sort((a, b) => b.total - a.total);
+
+    const RANK_MEDALS = ['🥇', '🥈', '🥉', '4位', '5位'];
+    const RANK_CLASSES = ['rank-1', 'rank-2', 'rank-3', 'rank-other', 'rank-other'];
+
+    const monthlyContainer = document.getElementById('naisho-monthly-row');
+    const monthlyBadge = document.getElementById('naisho-monthly-badge');
+    if (monthlyBadge) monthlyBadge.textContent = month;
+    if (monthlyContainer) {
+      monthlyContainer.innerHTML = monthlyScores.map((s, i) => `
+        <div class="naisho-rank-card ${RANK_CLASSES[i] || 'rank-other'}">
+          <div class="naisho-rank-medal">${RANK_MEDALS[i] || (i+1)+'位'}</div>
+          <div class="naisho-rank-name">${s.name}</div>
+          <div class="naisho-rank-num">${s.total}</div>
+          <div class="naisho-rank-unit">件</div>
+        </div>
+      `).join('');
+    }
+  }
+
 }
 
 // ======================================================
@@ -1822,7 +1866,7 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
   }
 
   // IntersectionObserver でスクロール位置に応じてハイライト
-  const sectionIds = ['section-27','section-naisho-rank','section-hero','section-persons','section-summary','section-funnel','section-kpi-rank','section-total-rank'];
+  const sectionIds = ['section-27','section-naisho-rank','section-naisho-monthly','section-hero','section-persons','section-summary','section-funnel','section-kpi-rank','section-total-rank'];
   const observers = [];
   let currentActive = 'section-hero';
 
