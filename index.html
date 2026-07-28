@@ -524,6 +524,22 @@
       .rvb-num { font-size: 60px; letter-spacing: -3px; }
       .rvb-unit { font-size: 22px; }
     }
+  /* 直近3ヶ月 内定承諾数ランキング */
+  .naisho-rank-row { display: flex; gap: 14px; overflow-x: auto; padding: 4px 0 12px; }
+  .naisho-rank-card { flex: 1; min-width: 110px; max-width: 160px; border-radius: 16px; padding: 20px 14px 16px; text-align: center; border: 1px solid var(--border); box-shadow: var(--shadow); transition: box-shadow 0.2s; }
+  .naisho-rank-card:hover { box-shadow: var(--shadow-lg); }
+  .naisho-rank-medal { font-size: 20px; margin-bottom: 6px; }
+  .naisho-rank-name { font-size: 13px; font-weight: 700; margin-bottom: 10px; color: var(--text-primary); }
+  .naisho-rank-num { font-size: 32px; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; }
+  .naisho-rank-unit { font-size: 11px; color: var(--text-secondary); margin-top: 4px; letter-spacing: 0.5px; }
+  .naisho-rank-card.rank-1 { background: #fffbeb; }
+  .naisho-rank-card.rank-1 .naisho-rank-num { color: var(--gold); }
+  .naisho-rank-card.rank-2 { background: #f0faf7; }
+  .naisho-rank-card.rank-2 .naisho-rank-num { color: var(--accent); }
+  .naisho-rank-card.rank-3 { background: #fdf2f2; }
+  .naisho-rank-card.rank-3 .naisho-rank-num { color: #b45309; }
+  .naisho-rank-card.rank-other { background: var(--surface); }
+  .naisho-rank-card.rank-other .naisho-rank-num { color: var(--text-secondary); }
   </style>
 </head>
 <body>
@@ -577,6 +593,9 @@
     <div class="nav-group-label">実績</div>
     <a class="nav-item active" data-target="section-27">
       <span class="nav-icon">🎓</span> 27卒 承諾実績
+    </a>
+    <a class="nav-item" data-target="section-naisho-rank">
+      <span class="nav-icon">🏆</span> 承諾ランキング
     </a>
     <a class="nav-item" data-target="section-yomi">
       <span class="nav-icon">📋</span> ヨミ表の人数
@@ -649,6 +668,19 @@
             <tr><td colspan="5" style="text-align:center;color:var(--text-secondary);padding:20px;">読み込み中...</td></tr>
           </tbody>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 直近3ヶ月 内定承諾数ランキング -->
+  <div id="section-naisho-rank" class="section">
+    <div class="sales-section">
+      <div class="sales-section-header">
+        <span class="stitle">🏆 直近3ヶ月 内定承諾数ランキング</span>
+        <span class="sbadge" id="naisho-rank-badge">集計中...</span>
+      </div>
+      <div class="naisho-rank-row" id="naisho-rank-row">
+        <div style="color:var(--text-secondary);padding:20px;font-size:13px;">読み込み中...</div>
       </div>
     </div>
   </div>
@@ -1246,6 +1278,43 @@ function renderDashboard(personsData, month) {
       </tr>`;
   });
 
+  // --- 直近3ヶ月 内定承諾数ランキング ---
+  {
+    const EXCLUDE = new Set(['菊池']);
+    const allMonths = PERSONS_LIST.length ? Object.keys(personsData[PERSONS_LIST[0]] || {}) : [];
+    const toNum = m => parseInt(m.replace('月', '')) || 0;
+    const sortedMonths = [...allMonths].sort((a, b) => toNum(a) - toNum(b));
+    const last3 = sortedMonths.slice(-3);
+
+    const rankScores = PERSONS_LIST
+      .filter(p => !EXCLUDE.has(p))
+      .map(p => {
+        const total = last3.reduce((s, m) => {
+          const d = personsData[p][m];
+          return s + (d && d.result ? (d.result['内定承諾数'] || 0) : 0);
+        }, 0);
+        return { name: p, total };
+      })
+      .sort((a, b) => b.total - a.total);
+
+    const RANK_MEDALS = ['🥇', '🥈', '🥉', '4位', '5位'];
+    const RANK_CLASSES = ['rank-1', 'rank-2', 'rank-3', 'rank-other', 'rank-other'];
+
+    const naishoContainer = document.getElementById('naisho-rank-row');
+    const naishoBadge = document.getElementById('naisho-rank-badge');
+    if (naishoBadge) naishoBadge.textContent = last3.length ? last3.join('・') : '';
+    if (naishoContainer) {
+      naishoContainer.innerHTML = rankScores.map((s, i) => `
+        <div class="naisho-rank-card ${RANK_CLASSES[i] || 'rank-other'}">
+          <div class="naisho-rank-medal">${RANK_MEDALS[i] || (i+1)+'位'}</div>
+          <div class="naisho-rank-name">${s.name}</div>
+          <div class="naisho-rank-num">${s.total}</div>
+          <div class="naisho-rank-unit">件</div>
+        </div>
+      `).join('');
+    }
+  }
+
 }
 
 // ======================================================
@@ -1778,7 +1847,7 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
   }
 
   // IntersectionObserver でスクロール位置に応じてハイライト
-  const sectionIds = ['section-27','section-yomi','section-hero','section-persons','section-summary','section-funnel','section-kpi-rank','section-total-rank'];
+  const sectionIds = ['section-27','section-naisho-rank','section-yomi','section-hero','section-persons','section-summary','section-funnel','section-kpi-rank','section-total-rank'];
   const observers = [];
   let currentActive = 'section-hero';
 
