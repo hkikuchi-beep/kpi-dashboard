@@ -1618,7 +1618,7 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
 
     // アドバイザー別に27卒承諾人数・金額を集計
     const advisorMap = {};
-    const SKIP_NAMES = new Set(['合計', 'Total', '合　計']);
+    const SKIP_NAMES = new Set(['合計', 'Total', '合　計', '菊池']);
     for (let i = headerIdx + 1; i < rows.length; i++) {
       const r = rows[i];
       const advisor = (r[nameColIdx] || '').trim();
