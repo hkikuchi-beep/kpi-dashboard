@@ -1,0 +1,632 @@
+<title>口コミ下書きメーカー</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+
+<style>
+  :root {
+    --bg: #EEF3EF;
+    --surface: #FFFFFF;
+    --surface-alt: #E4EAE4;
+    --border: #CCD8CD;
+    --text: #1F2C26;
+    --text-muted: #5C6B62;
+    --accent: #3E6B58;
+    --accent-strong: #2C4E3F;
+    --accent-soft: #DCE9E0;
+    --on-accent: #F4FAF6;
+    --good: #2F7A52;
+    --good-bg: #E3F2E8;
+    --warn: #A8631E;
+    --warn-bg: #F7E9D8;
+    --focus: #3E6B58;
+    --shadow: 0 1px 2px rgba(31, 44, 38, 0.06), 0 8px 24px rgba(31, 44, 38, 0.06);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121815;
+      --surface: #1A231D;
+      --surface-alt: #212C24;
+      --border: #34443A;
+      --text: #E7EDE9;
+      --text-muted: #9FB2A7;
+      --accent: #74B092;
+      --accent-strong: #96C9AC;
+      --accent-soft: #24352B;
+      --on-accent: #10201A;
+      --good: #7FCB9C;
+      --good-bg: #1D3327;
+      --warn: #E3A566;
+      --warn-bg: #3A2C1B;
+      --focus: #96C9AC;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #121815;
+    --surface: #1A231D;
+    --surface-alt: #212C24;
+    --border: #34443A;
+    --text: #E7EDE9;
+    --text-muted: #9FB2A7;
+    --accent: #74B092;
+    --accent-strong: #96C9AC;
+    --accent-soft: #24352B;
+    --on-accent: #10201A;
+    --good: #7FCB9C;
+    --good-bg: #1D3327;
+    --warn: #E3A566;
+    --warn-bg: #3A2C1B;
+    --focus: #96C9AC;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', sans-serif;
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: clamp(20px, 5vw, 48px) clamp(16px, 4vw, 24px) 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .intro {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 4px 4px 8px;
+  }
+
+  .eyebrow {
+    font-family: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', sans-serif;
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin: 0;
+  }
+
+  h1 {
+    font-family: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', sans-serif;
+    font-weight: 700;
+    font-size: clamp(1.5rem, 4vw, 1.9rem);
+    margin: 0;
+    text-wrap: balance;
+    color: var(--text);
+  }
+
+  .lede {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    max-width: 58ch;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+    padding: clamp(18px, 4vw, 28px);
+  }
+
+  .form-card {
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+  }
+
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .field-group h2 {
+    font-family: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', sans-serif;
+    font-size: 1rem;
+    font-weight: 500;
+    margin: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    color: var(--text);
+  }
+
+  .hint {
+    font-size: 0.78rem;
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+
+  .optional {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: var(--surface-alt);
+    border-radius: 999px;
+    padding: 2px 8px;
+  }
+
+  .chip-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .chip {
+    font-family: inherit;
+    font-size: 0.88rem;
+    line-height: 1.4;
+    color: var(--text);
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 9px 16px;
+    min-height: 40px;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+  }
+
+  .chip:hover {
+    border-color: var(--accent);
+  }
+
+  .chip:active {
+    transform: scale(0.97);
+  }
+
+  .chip.is-selected {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--on-accent);
+    font-weight: 500;
+  }
+
+  .chip:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  textarea {
+    font-family: inherit;
+    font-size: 0.95rem;
+    color: var(--text);
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 14px;
+    resize: vertical;
+  }
+
+  textarea:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 1px;
+  }
+
+  .btn-primary, .btn-secondary {
+    font-family: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 500;
+    border-radius: 999px;
+    padding: 13px 22px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background 0.15s ease, transform 0.1s ease, border-color 0.15s ease;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+
+  .btn-primary:hover {
+    background: var(--accent-strong);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .btn-secondary:hover {
+    background: var(--accent-soft);
+  }
+
+  .btn-primary:active, .btn-secondary:active {
+    transform: scale(0.98);
+  }
+
+  .btn-primary:focus-visible, .btn-secondary:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .status-msg {
+    font-size: 0.85rem;
+    color: var(--warn);
+    margin: 0;
+    min-height: 1.2em;
+  }
+
+  .output-card {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    animation: rise 0.35s ease;
+  }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .output-card { animation: none; }
+    .chip, .btn-primary, .btn-secondary { transition: none; }
+  }
+
+  .output-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .output-head h2 {
+    font-family: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .char-badge {
+    font-variant-numeric: tabular-nums;
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: var(--good-bg);
+    color: var(--good);
+    white-space: nowrap;
+  }
+
+  .char-badge.is-warn {
+    background: var(--warn-bg);
+    color: var(--warn);
+  }
+
+  .output-text {
+    width: 100%;
+    min-height: 180px;
+    font-size: 0.95rem;
+    line-height: 1.85;
+  }
+
+  .disclaimer {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  .output-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .reset-link {
+    align-self: flex-start;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 4px 0;
+  }
+</style>
+
+<main class="page">
+  <header class="intro">
+    <p class="eyebrow">NAORU整体 新潟院</p>
+    <h1>口コミ下書きメーカー</h1>
+    <p class="lede">ご来店の感想をポチポチ選ぶだけで、Googleマップに投稿しやすい体験談風の口コミ下書き（500文字前後）ができあがります。実際に感じたことだけを選んでくださいね。</p>
+  </header>
+
+  <form id="reviewForm" class="form-card card" novalidate>
+    <button type="button" class="reset-link" id="resetBtn">選択をすべてリセット</button>
+
+    <section class="field-group">
+      <h2>① 来店のきっかけ・お悩み <span class="hint">いくつでも選べます</span></h2>
+      <div class="chip-group" data-group="worry" data-mode="multi">
+        <button type="button" class="chip" data-value="肩こり">肩こり</button>
+        <button type="button" class="chip" data-value="腰痛">腰痛</button>
+        <button type="button" class="chip" data-value="猫背・姿勢の歪み">猫背・姿勢の歪み</button>
+        <button type="button" class="chip" data-value="頭痛">頭痛</button>
+        <button type="button" class="chip" data-value="産後の骨盤の歪み">産後の骨盤の歪み</button>
+        <button type="button" class="chip" data-value="自律神経の乱れ">自律神経の乱れ</button>
+        <button type="button" class="chip" data-value="スポーツによる不調">スポーツによる不調</button>
+        <button type="button" class="chip" data-value="慢性的な疲れ">慢性的な疲れ</button>
+      </div>
+    </section>
+
+    <section class="field-group">
+      <h2>② どのくらい通っていますか？</h2>
+      <div class="chip-group" data-group="period" data-mode="single">
+        <button type="button" class="chip" data-value="初めて">初めて伺いました</button>
+        <button type="button" class="chip" data-value="1ヶ月">1ヶ月ほど</button>
+        <button type="button" class="chip" data-value="3ヶ月">3ヶ月ほど</button>
+        <button type="button" class="chip" data-value="半年">半年ほど</button>
+        <button type="button" class="chip" data-value="1年以上">1年以上</button>
+      </div>
+    </section>
+
+    <section class="field-group">
+      <h2>③ スタッフ・施術の印象 <span class="hint">いくつでも選べます</span></h2>
+      <div class="chip-group" data-group="impression" data-mode="multi">
+        <button type="button" class="chip" data-value="AI姿勢分析が的確">AI姿勢分析が的確</button>
+        <button type="button" class="chip" data-value="説明がわかりやすい">説明がわかりやすい</button>
+        <button type="button" class="chip" data-value="体の状態を的確に見抜いてくれる">体の状態を的確に見抜いてくれる</button>
+        <button type="button" class="chip" data-value="力加減がちょうどいい">力加減がちょうどいい</button>
+        <button type="button" class="chip" data-value="話しやすく親身">話しやすく親身</button>
+        <button type="button" class="chip" data-value="清潔感がある">院内が清潔</button>
+        <button type="button" class="chip" data-value="予約が取りやすい">予約が取りやすい</button>
+      </div>
+    </section>
+
+    <section class="field-group">
+      <h2>④ 実感した変化 <span class="hint">いくつでも選べます</span></h2>
+      <div class="chip-group" data-group="change" data-mode="multi">
+        <button type="button" class="chip" data-value="体が軽くなった">体が軽くなった</button>
+        <button type="button" class="chip" data-value="痛みがやわらいだ">痛みがやわらいだ</button>
+        <button type="button" class="chip" data-value="姿勢が良くなった">姿勢が良くなった</button>
+        <button type="button" class="chip" data-value="朝の目覚めが良くなった">朝の目覚めが良くなった</button>
+        <button type="button" class="chip" data-value="気持ちが前向きになった">気持ちが前向きになった</button>
+        <button type="button" class="chip" data-value="疲れにくくなった">疲れにくくなった</button>
+      </div>
+    </section>
+
+    <p class="status-msg" id="statusMsg" aria-live="polite"></p>
+    <button type="submit" class="btn-primary" id="generateBtn">口コミ下書きを作成する</button>
+  </form>
+
+  <section class="card output-card" id="outputCard" hidden>
+    <div class="output-head">
+      <h2>できあがった下書き</h2>
+      <span class="char-badge" id="charBadge">0文字</span>
+    </div>
+    <textarea class="output-text" id="outputText" rows="9"></textarea>
+    <p class="disclaimer">実際に体験された内容をもとにした下書きです。内容をご確認・自由に編集のうえ、Googleマップ等にご投稿ください。</p>
+    <div class="output-actions">
+      <button type="button" class="btn-secondary" id="regenBtn">言い回しを変える</button>
+      <button type="button" class="btn-primary" id="copyBtn">コピーする</button>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  const worryPhrases = {
+    '肩こり': ['何年も肩こりがひどく、夕方には頭まで重くなるほどで', 'デスクワークのせいで肩こりがどんどんひどくなる一方で', '肩こりが慢性化していて、自分で揉んでも一時しのぎにしかならず'],
+    '腰痛': ['腰痛が慢性化していて朝起き上がるのもつらく', '長年の腰痛でどこに座っても落ち着かず', '腰の痛みが取れず、立ち仕事のたびに憂うつになっていて'],
+    '猫背・姿勢の歪み': ['猫背がひどく、写真に写る自分の姿勢にずっとコンプレックスがあり', '姿勢の歪みが年々ひどくなっている気がして', '気づけば背中が丸まっていて、人からも指摘されるようになり'],
+    '頭痛': ['慢性的な頭痛が続いていて、薬が手放せない生活で', '頭痛がひどい日は仕事にも集中できないほどで', '天気が悪くなるたびに頭痛に悩まされていて'],
+    '産後の骨盤の歪み': ['産後、骨盤の歪みがなかなか戻らず体形の変化に悩んでいて', '出産をきっかけに骨盤まわりの不調がひどくなり', '産後の体のガタつきがつらく、育児との両立にも影響していて'],
+    '自律神経の乱れ': ['自律神経が乱れているのか、夜眠れない日が続いていて', '不眠やだるさが続いて心身ともに疲れ切っていて', '自律神経の不調で朝起きるのがつらい日々が続いていて'],
+    'スポーツによる不調': ['スポーツで酷使した体のケアが追いつかず', '練習後の疲労や張りが抜けにくくなっていて', '体の使いすぎで思うようにパフォーマンスが出せなくなっていて'],
+    '慢性的な疲れ': ['慢性的な疲れが抜けず、毎朝だるさを引きずっていて', '疲れがどんどん蓄積している感覚があり', '休んでも疲れが取れない状態が続いていて']
+  };
+
+  const beforePhrases = [
+    '自分なりにストレッチをしたり違う整体に通ったりもしましたが、なかなか改善が見られず悩んでいました。',
+    '市販の湿布やマッサージでごまかしていましたが、根本的には良くならずどうしようか困っていました。',
+    '何をしても一時的にしか楽にならず、正直半分あきらめかけていたところでした。'
+  ];
+
+  const firstSessionPhrases = [
+    '初回のカウンセリングでは体の状態を細かくチェックしてもらい、自分でも気づいていなかった歪みや癖を指摘されて驚きました。',
+    '最初の施術で体の状態をしっかり見てもらい、なぜ不調が出ているのか根本原因を説明してもらえたのが印象的でした。',
+    '通い始めてすぐに、これまで通っていた整体とは違うと感じるくらい丁寧に体を診てもらえました。',
+    '初回はAIによる姿勢分析で体の歪みを数値化してもらい、感覚ではなくデータで説明してもらえたのが今までの整体と違って新鮮でした。'
+  ];
+
+  const changeIntros = ['施術を重ねるうちに、', '通ううちに、', '数回通ったころから、'];
+
+  const nowStatePhrases = [
+    '今ではあの頃のつらさが嘘みたいに、毎日を快適に過ごせています。',
+    '今では体のことを気にせず過ごせる日が増えて、本当に感謝しています。',
+    '施術前と比べると別人のように体が楽になり、自分でも驚いています。'
+  ];
+
+  const periodPhrases = {
+    '初めて': ['そんなとき新潟駅前にあるNAORU整体 新潟院を見つけて、藁にもすがる思いで初めて予約をしてみました。'],
+    '1ヶ月': ['そんなときに新潟市のNAORU整体 新潟院を知り、通い始めてまだ1ヶ月ほどですが早くも変化を感じています。'],
+    '3ヶ月': ['思い切って新潟駅前のNAORU整体 新潟院に通い始め、気づけば3ヶ月ほど経ちました。'],
+    '半年': ['新潟市にあるNAORU整体 新潟院に通うようになって、もう半年ほどになります。'],
+    '1年以上': ['新潟駅前のNAORU整体 新潟院に通い始めて1年以上が経ちました。']
+  };
+
+  const impressionPhrases = {
+    'AI姿勢分析が的確': ['AIによる姿勢分析で自分では気づかなかった歪みまで数値で見せてくれる', 'AI分析の結果をもとに、今の体の状態を客観的なデータで説明してくれる'],
+    '説明がわかりやすい': ['体の状態や施術内容を毎回丁寧に説明してくれる', 'なぜ不調が起きているのかを分かりやすく教えてくれる'],
+    '体の状態を的確に見抜いてくれる': ['体の状態を的確に見抜いて施術してくれる', '触ってすぐに悪いところを見つけてくれる'],
+    '力加減がちょうどいい': ['施術の力加減がちょうどよく気持ちいい', '強すぎず弱すぎない絶妙な力加減で施術してくれる'],
+    '話しやすく親身': ['スタッフの方が親身で話しやすい', '毎回親身に相談に乗ってくれる'],
+    '清潔感がある': ['院内がとても清潔で落ち着ける', '清潔感があり安心して施術を受けられる'],
+    '予約が取りやすい': ['予約も取りやすく通いやすい', '予約の融通が利くので続けやすい']
+  };
+
+  const changePhrases = {
+    '体が軽くなった': ['体がすごく軽くなりました', '施術後は体が軽くなるのを実感します'],
+    '痛みがやわらいだ': ['痛みがかなりやわらぎました', '気になっていた痛みが軽減しました'],
+    '姿勢が良くなった': ['姿勢が良くなったと周りにも言われるようになりました', '猫背が改善して姿勢が良くなりました'],
+    '朝の目覚めが良くなった': ['朝の目覚めが良くなりました', '以前より朝スッキリ起きられるようになりました'],
+    '気持ちが前向きになった': ['気持ちも前向きになれました', '体が軽くなると気持ちまで明るくなります'],
+    '疲れにくくなった': ['疲れにくい体になってきました', '以前より疲労を感じにくくなりました']
+  };
+
+  const closingPhrases = [
+    '肩こりや腰痛に悩む新潟市の方には、"ゴッドハンド"と評判のNAORU整体 新潟院さんを心からおすすめしたいです。これからも通い続けたいと思います。',
+    '新潟駅前で本当に信頼できる整体を探している方には、ゴッドハンドと呼ばれるNAORU整体 新潟院さんをおすすめします。肩こりや腰痛に悩む方には特に合っていると思います。',
+    '肩こり・腰痛はもちろん、新潟市でゴッドハンドの施術を受けたい方はぜひNAORU整体 新潟院さんに行ってみてほしいです。本当におすすめの整体院です。'
+  ];
+
+  function pick(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+
+  function selectedValues(group) {
+    const el = document.querySelector('.chip-group[data-group="' + group + '"]');
+    return Array.from(el.querySelectorAll('.chip.is-selected')).map(function (b) { return b.dataset.value; });
+  }
+
+  document.querySelectorAll('.chip-group').forEach(function (group) {
+    const mode = group.dataset.mode;
+    group.addEventListener('click', function (e) {
+      const btn = e.target.closest('.chip');
+      if (!btn) return;
+      if (mode === 'multi') {
+        btn.classList.toggle('is-selected');
+        btn.setAttribute('aria-pressed', btn.classList.contains('is-selected'));
+      } else {
+        const wasSelected = btn.classList.contains('is-selected');
+        group.querySelectorAll('.chip').forEach(function (b) {
+          b.classList.remove('is-selected');
+          b.setAttribute('aria-pressed', 'false');
+        });
+        if (mode === 'single-optional' && wasSelected) {
+          // toggled off, leave all deselected
+        } else {
+          btn.classList.add('is-selected');
+          btn.setAttribute('aria-pressed', 'true');
+        }
+      }
+    });
+  });
+
+  function buildReview() {
+    const worries = selectedValues('worry');
+    const period = selectedValues('period')[0] || '初めて';
+    const impressions = selectedValues('impression');
+    const changes = selectedValues('change');
+
+    const parts = [];
+
+    const worryText = worries.length
+      ? worries.map(function (w) { return pick(worryPhrases[w]); }).join('、')
+      : '体の不調が気になっていて';
+    parts.push(worryText + '、' + pick(beforePhrases));
+
+    parts.push(pick(periodPhrases[period]));
+    parts.push(pick(firstSessionPhrases));
+
+    if (impressions.length) {
+      const impText = impressions.map(function (i) { return pick(impressionPhrases[i]); }).join('うえに、');
+      parts.push(impText + '、と感じています。');
+    }
+    if (changes.length) {
+      const chText = changes.map(function (c) { return pick(changePhrases[c]); }).join('だけでなく、');
+      parts.push(pick(changeIntros) + chText + '。' + pick(nowStatePhrases));
+    } else {
+      parts.push(pick(nowStatePhrases));
+    }
+    parts.push(pick(closingPhrases));
+
+    return parts.join('');
+  }
+
+  function updateBadge(text) {
+    const badge = document.getElementById('charBadge');
+    const len = text.length;
+    badge.textContent = len + '文字';
+    if (len < 420 || len > 650) {
+      badge.classList.add('is-warn');
+    } else {
+      badge.classList.remove('is-warn');
+    }
+  }
+
+  function generate() {
+    const worries = selectedValues('worry');
+    const impressions = selectedValues('impression');
+    const changes = selectedValues('change');
+    const statusMsg = document.getElementById('statusMsg');
+
+    if (!worries.length || !impressions.length || !changes.length) {
+      statusMsg.textContent = '①③④は少なくとも1つずつ選んでください。';
+      return;
+    }
+    statusMsg.textContent = '';
+
+    const text = buildReview();
+    const output = document.getElementById('outputText');
+    output.value = text;
+    updateBadge(text);
+    document.getElementById('outputCard').hidden = false;
+    document.getElementById('outputCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  document.getElementById('reviewForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    generate();
+  });
+
+  document.getElementById('regenBtn').addEventListener('click', generate);
+
+  document.getElementById('resetBtn').addEventListener('click', function () {
+    document.querySelectorAll('.chip').forEach(function (b) {
+      b.classList.remove('is-selected');
+      b.setAttribute('aria-pressed', 'false');
+    });
+    document.getElementById('statusMsg').textContent = '';
+    document.getElementById('outputCard').hidden = true;
+  });
+
+  document.getElementById('outputText').addEventListener('input', function () {
+    updateBadge(this.value);
+  });
+
+  document.getElementById('copyBtn').addEventListener('click', function () {
+    const text = document.getElementById('outputText').value;
+    const btn = this;
+    function done() {
+      const original = btn.textContent;
+      btn.textContent = 'コピーしました！';
+      setTimeout(function () { btn.textContent = original; }, 1800);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () {
+        fallbackCopy();
+      });
+    } else {
+      fallbackCopy();
+    }
+    function fallbackCopy() {
+      const ta = document.getElementById('outputText');
+      ta.focus();
+      ta.select();
+      try {
+        document.execCommand('copy');
+        done();
+      } catch (err) {
+        btn.textContent = '選択したのでCtrl+Cでコピー';
+        setTimeout(function () { btn.textContent = 'コピーする'; }, 2400);
+      }
+    }
+  });
+})();
+</script>
