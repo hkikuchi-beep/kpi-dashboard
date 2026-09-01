@@ -420,22 +420,16 @@
 
 <script>
 (function () {
-  const worryPhrases = {
-    '肩こり': ['肩こりが気になっていて', 'デスクワークで肩こりがひどくなってきていて', '肩まわりの張りがなかなか取れず'],
-    '腰痛': ['腰痛が気になっていて', '座り仕事が続くと腰が重くなりやすく', '腰の痛みがなかなか取れず'],
-    '猫背・姿勢の歪み': ['猫背や姿勢の歪みが気になっていて', '姿勢の悪さが気になっていて', '背中が丸まりがちなのが気になっていて'],
-    '頭痛': ['頭痛が気になっていて', '頭痛が出やすく', '天気が悪い日は頭痛が出やすく'],
-    '産後の骨盤の歪み': ['産後、骨盤の歪みが気になっていて', '出産後、体形の変化が気になっていて', '産後の体のガタつきが気になっていて'],
-    '自律神経の乱れ': ['自律神経の乱れが気になっていて', '寝つきの悪さが続いていて', '倦怠感が続いていて'],
-    'スポーツによる不調': ['スポーツによる体の不調が気になっていて', '練習後の疲労や張りが抜けにくく', '体の使いすぎによる不調が気になっていて'],
-    '慢性的な疲れ': ['慢性的な疲れが気になっていて', '疲れがなかなか抜けず', '休んでも疲れが取れにくく']
+  const worryShortPhrases = {
+    '肩こり': '肩こり',
+    '腰痛': '腰痛',
+    '猫背・姿勢の歪み': '猫背や姿勢の歪み',
+    '頭痛': '頭痛',
+    '産後の骨盤の歪み': '産後の骨盤の歪み',
+    '自律神経の乱れ': '自律神経の乱れ',
+    'スポーツによる不調': 'スポーツによる体の不調',
+    '慢性的な疲れ': '慢性的な疲れ'
   };
-
-  const beforePhrases = [
-    '自分なりにストレッチをしたり違う整体に通ったりもしましたが、なかなか改善が見られず悩んでいました。',
-    '市販の湿布やマッサージでごまかしていましたが、根本的には良くならずどうしようか困っていました。',
-    '何をしても一時的にしか楽にならず、正直半分あきらめかけていたところでした。'
-  ];
 
   const firstSessionPhrases = [
     '初回のカウンセリングでは体の状態を細かくチェックしてもらい、自分では気づいていなかった歪みや癖を教えてもらいました。',
@@ -446,18 +440,36 @@
 
   const changeIntros = ['施術を重ねるうちに、', '通ううちに、', '数回通ったころから、'];
 
+  const changeElaboration = [
+    '施術のたびにその変化を実感できるのが嬉しいです。',
+    '日常生活の中でもその違いをはっきり感じます。',
+    '仕事や家事をしているときにも体の軽さを実感します。'
+  ];
+
   const nowStatePhrases = [
     '施術前に比べると、体がだいぶ楽になってきたと感じています。',
     '以前より体のことを気にせず過ごせる日が増えました。',
     '施術を受ける前と比べて、体調が安定してきたように思います。'
   ];
 
+  const impressionFollowups = [
+    'そのおかげで、施術のたびに安心して任せられています。',
+    'そうした対応のおかげで、通うのが苦になりません。',
+    'そのため、毎回リラックスして施術を受けられています。'
+  ];
+
+  const finalThanks = [
+    '担当してくれるスタッフの皆さんにはいつも感謝しています。',
+    'これからも自分の体と向き合いながら通い続けたいと思います。',
+    '新潟で整体を探すなら、まず候補に入れてほしい整体院です。'
+  ];
+
   const periodPhrases = {
-    '初めて': ['そんなとき新潟駅前にあるNAORU整体 新潟院を見つけて、試しに予約してみました。'],
-    '1ヶ月': ['そんなときに新潟市のNAORU整体 新潟院を知り、通い始めてまだ1ヶ月ほどです。'],
-    '3ヶ月': ['気になって新潟駅前のNAORU整体 新潟院に通い始め、気づけば3ヶ月ほど経ちました。'],
-    '半年': ['新潟市にあるNAORU整体 新潟院に通うようになって、もう半年ほどになります。'],
-    '1年以上': ['新潟駅前のNAORU整体 新潟院に通い始めて1年以上が経ちました。']
+    '初めて': function (w) { return w + 'が気になり、新潟駅前のNAORU整体 新潟院に伺いました。'; },
+    '1ヶ月': function (w) { return w + 'が気になり、新潟市のNAORU整体 新潟院に通い始めて1ヶ月ほどです。'; },
+    '3ヶ月': function (w) { return w + 'が気になり、新潟駅前のNAORU整体 新潟院に3ヶ月ほど通っています。'; },
+    '半年': function (w) { return w + 'が気になり、新潟市のNAORU整体 新潟院に半年ほど通っています。'; },
+    '1年以上': function (w) { return w + 'が気になり、新潟駅前のNAORU整体 新潟院に1年以上通っています。'; }
   };
 
   const impressionPhrases = {
@@ -526,31 +538,30 @@
 
     const parts = [];
 
-    let worryText;
+    let worryLabel;
     if (worries.length) {
-      const primaryText = pick(worryPhrases[worries[0]]);
-      worryText = worries.length > 1
-        ? primaryText + '（' + worries.slice(1).join('・') + 'も気になっていました）'
-        : primaryText;
+      const primary = worryShortPhrases[worries[0]];
+      worryLabel = worries.length > 1
+        ? primary + '（' + worries.slice(1).join('・') + 'も）'
+        : primary;
     } else {
-      worryText = '体の不調が気になっていて';
+      worryLabel = '体の不調';
     }
-    parts.push(worryText + '、' + pick(beforePhrases));
+    parts.push(periodPhrases[period](worryLabel));
 
-    parts.push(pick(periodPhrases[period]));
     parts.push(pick(firstSessionPhrases));
 
     if (impressions.length) {
       const impText = impressions.map(function (i) { return pick(impressionPhrases[i]); }).join('うえに、');
-      parts.push(impText + '、と感じています。');
+      parts.push(impText + '、と感じています。' + pick(impressionFollowups));
     }
     if (changes.length) {
       const chText = changes.map(function (c) { return pick(changePhrases[c]); }).join('だけでなく、');
-      parts.push(pick(changeIntros) + chText + '。' + pick(nowStatePhrases));
+      parts.push(pick(changeIntros) + chText + '。' + pick(changeElaboration) + pick(nowStatePhrases));
     } else {
       parts.push(pick(nowStatePhrases));
     }
-    parts.push(pick(closingPhrases));
+    parts.push(pick(closingPhrases) + pick(finalThanks));
 
     return parts.join('');
   }
