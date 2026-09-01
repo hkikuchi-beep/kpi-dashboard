@@ -438,7 +438,8 @@
     '初回はAIによる姿勢分析で体の歪みを数値化してもらい、感覚ではなくデータで説明してもらえたのが分かりやすかったです。'
   ];
 
-  const changeIntros = ['施術を重ねるうちに、', '通ううちに、', '数回通ったころから、'];
+  const changeIntrosFirstVisit = ['施術を受けてみると、', '施術後には、', 'その場で早速、'];
+  const changeIntrosReturning = ['施術を重ねるうちに、', '通ううちに、', '数回通ったころから、'];
 
   const changeElaboration = [
     '施術のたびにその変化を実感できるのが嬉しいです。',
@@ -446,13 +447,25 @@
     '仕事や家事をしているときにも体の軽さを実感します。'
   ];
 
-  const nowStatePhrases = [
+  const nowStatePhrasesFirstVisit = [
+    '施術後は体がすっと軽くなったのを感じました。',
+    '一度でここまで変わるとは思っていませんでした。',
+    '施術直後から体の軽さを実感できました。'
+  ];
+
+  const nowStatePhrasesReturning = [
     '施術前に比べると、体がだいぶ楽になってきたと感じています。',
     '以前より体のことを気にせず過ごせる日が増えました。',
     '施術を受ける前と比べて、体調が安定してきたように思います。'
   ];
 
-  const impressionFollowups = [
+  const impressionFollowupsFirstVisit = [
+    'そのおかげで、初めてでも安心して任せられました。',
+    'そうした対応のおかげで、緊張せずに施術を受けられました。',
+    'そのため、初回から信頼して相談できました。'
+  ];
+
+  const impressionFollowupsReturning = [
     'そのおかげで、施術のたびに安心して任せられています。',
     'そうした対応のおかげで、通うのが苦になりません。',
     'そのため、毎回リラックスして施術を受けられています。'
@@ -547,14 +560,20 @@
     } else {
       worryLabel = '体の不調';
     }
+    const isFirstVisit = period === '初めて';
+
     parts.push(periodPhrases[period](worryLabel));
 
     parts.push(pick(firstSessionPhrases));
 
+    const impressionFollowups = isFirstVisit ? impressionFollowupsFirstVisit : impressionFollowupsReturning;
     if (impressions.length) {
       const impText = impressions.map(function (i) { return pick(impressionPhrases[i]); }).join('うえに、');
       parts.push(impText + '、と感じています。' + pick(impressionFollowups));
     }
+
+    const changeIntros = isFirstVisit ? changeIntrosFirstVisit : changeIntrosReturning;
+    const nowStatePhrases = isFirstVisit ? nowStatePhrasesFirstVisit : nowStatePhrasesReturning;
     if (changes.length) {
       const chText = changes.map(function (c) { return pick(changePhrases[c]); }).join('だけでなく、');
       parts.push(pick(changeIntros) + chText + '。' + pick(changeElaboration) + pick(nowStatePhrases));
