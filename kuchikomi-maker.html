@@ -396,10 +396,10 @@
       <h2>② どのくらい通っていますか？</h2>
       <div class="chip-group" data-group="period" data-mode="single">
         <button type="button" class="chip" data-value="初めて">初めて伺いました</button>
+        <button type="button" class="chip" data-value="2回目">2回目</button>
         <button type="button" class="chip" data-value="1ヶ月">1ヶ月ほど</button>
         <button type="button" class="chip" data-value="3ヶ月">3ヶ月ほど</button>
         <button type="button" class="chip" data-value="半年">半年ほど</button>
-        <button type="button" class="chip" data-value="1年以上">1年以上</button>
       </div>
     </section>
 
@@ -510,10 +510,10 @@
 
   const periodPhrases = {
     '初めて': function (w) { return w + 'が気になり、新潟駅前のNAORU整体 新潟院に伺いました。'; },
+    '2回目': function (w) { return w + 'が気になり、新潟駅前のNAORU整体 新潟院に伺い、今回で2回目の施術でした。'; },
     '1ヶ月': function (w) { return w + 'が気になり、新潟市のNAORU整体 新潟院に通い始めて1ヶ月ほどです。'; },
     '3ヶ月': function (w) { return w + 'が気になり、新潟駅前のNAORU整体 新潟院に3ヶ月ほど通っています。'; },
-    '半年': function (w) { return w + 'が気になり、新潟市のNAORU整体 新潟院に半年ほど通っています。'; },
-    '1年以上': function (w) { return w + 'が気になり、新潟駅前のNAORU整体 新潟院に1年以上通っています。'; }
+    '半年': function (w) { return w + 'が気になり、新潟市のNAORU整体 新潟院に半年ほど通っています。'; }
   };
 
   const impressionPhrases = {
@@ -591,7 +591,7 @@
     } else {
       worryLabel = '体の不調';
     }
-    const isFirstVisit = period === '初めて';
+    const isFirstVisit = period === '初めて' || period === '2回目';
 
     parts.push(periodPhrases[period](worryLabel));
 
