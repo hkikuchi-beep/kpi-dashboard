@@ -474,9 +474,9 @@
   const changeIntrosReturning = ['施術を重ねるうちに、', '通ううちに、', '数回通ったころから、'];
 
   const changeElaboration = [
-    '施術のたびにその変化を実感できるのが嬉しいです。',
+    '毎回の施術後にその違いがよくわかります。',
     '日常生活の中でもその違いをはっきり感じます。',
-    '仕事や家事をしているときにも体の軽さを実感します。'
+    '仕事や家事をしているときにもその変化に気づきます。'
   ];
 
   const nowStatePhrasesFirstVisit = [
@@ -505,7 +505,7 @@
 
   const finalThanks = [
     '担当してくれるスタッフの皆さんにはいつも感謝しています。',
-    'これからも自分の体と向き合いながら通い続けたいと思います。',
+    '身体のことを相談できる場所があるのは心強いです。',
     '新潟で整体を探すなら、まず候補に入れてほしい整体院です。'
   ];
 
@@ -528,13 +528,21 @@
   };
 
   const changePhrases = {
-    '体が軽くなった': ['体がすごく軽くなりました', '施術後は体が軽くなるのを実感します'],
-    '痛みがやわらいだ': ['痛みがかなりやわらぎました', '気になっていた痛みが軽減しました'],
-    '姿勢が良くなった': ['姿勢が良くなったと周りにも言われるようになりました', '猫背が改善して姿勢が良くなりました'],
-    '朝の目覚めが良くなった': ['朝の目覚めが良くなりました', '以前より朝スッキリ起きられるようになりました'],
-    '気持ちが前向きになった': ['気持ちも前向きになれました', '体が軽くなると気持ちまで明るくなります'],
-    '疲れにくくなった': ['疲れにくい体になってきました', '以前より疲労を感じにくくなりました']
+    '体が軽くなった': ['体が軽くなった', '体の軽さを感じるようになった'],
+    '痛みがやわらいだ': ['痛みがやわらいだ', '気になっていた痛みが軽くなった'],
+    '姿勢が良くなった': ['姿勢が良くなった', '猫背が改善した'],
+    '朝の目覚めが良くなった': ['朝の目覚めが良くなった', '朝スッキリ起きられるようになった'],
+    '気持ちが前向きになった': ['気持ちが前向きになった', '気分が明るくなった'],
+    '疲れにくくなった': ['疲れにくくなった', '疲労を感じにくくなった']
   };
+
+  function buildChangeText(fragments, isFirstVisit) {
+    const tail = isFirstVisit ? 'のを実感しました。' : 'のを実感しています。';
+    if (fragments.length === 1) {
+      return fragments[0] + tail;
+    }
+    return fragments.map(function (f) { return f + 'り'; }).join('、') + 'する' + tail;
+  }
 
   const closingPhrases = [
     '肩こりや腰痛に悩む新潟市の方には、"ゴッドハンド"と評判のNAORU整体 新潟院さんをおすすめしたいです。これからも通い続けようと思います。',
@@ -583,15 +591,9 @@
 
     const parts = [];
 
-    let worryLabel;
-    if (worries.length) {
-      const primary = worryShortPhrases[worries[0]];
-      worryLabel = worries.length > 1
-        ? primary + '（' + worries.slice(1).join('・') + 'も）'
-        : primary;
-    } else {
-      worryLabel = '体の不調';
-    }
+    const worryLabel = worries.length
+      ? worries.slice(0, 2).map(function (w) { return worryShortPhrases[w]; }).join('や')
+      : '体の不調';
     const isFirstVisit = period === '初めて' || period === '2回目';
 
     parts.push(periodPhrases[period](worryLabel));
@@ -601,14 +603,14 @@
     const impressionFollowups = isFirstVisit ? impressionFollowupsFirstVisit : impressionFollowupsReturning;
     if (impressions.length) {
       const impText = impressions.map(function (i) { return pick(impressionPhrases[i]); }).join('うえに、');
-      parts.push(impText + '、と感じています。' + pick(impressionFollowups));
+      parts.push(impText + '、という点が良かったです。' + pick(impressionFollowups));
     }
 
     const changeIntros = isFirstVisit ? changeIntrosFirstVisit : changeIntrosReturning;
     const nowStatePhrases = isFirstVisit ? nowStatePhrasesFirstVisit : nowStatePhrasesReturning;
     if (changes.length) {
-      const chText = changes.map(function (c) { return pick(changePhrases[c]); }).join('だけでなく、');
-      parts.push(pick(changeIntros) + chText + '。' + pick(changeElaboration) + pick(nowStatePhrases));
+      const fragments = changes.map(function (c) { return pick(changePhrases[c]); });
+      parts.push(pick(changeIntros) + buildChangeText(fragments, isFirstVisit) + pick(changeElaboration) + pick(nowStatePhrases));
     } else {
       parts.push(pick(nowStatePhrases));
     }
