@@ -76,7 +76,7 @@
   .page {
     max-width: 720px;
     margin: 0 auto;
-    padding: clamp(20px, 5vw, 48px) clamp(16px, 4vw, 24px) 64px;
+    padding: clamp(20px, 5vw, 48px) clamp(16px, 4vw, 24px) calc(96px + env(safe-area-inset-bottom));
     display: flex;
     flex-direction: column;
     gap: 20px;
@@ -163,20 +163,22 @@
   .chip-group {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 10px;
   }
 
   .chip {
     font-family: inherit;
-    font-size: 0.88rem;
+    font-size: 0.94rem;
     line-height: 1.4;
     color: var(--text);
     background: var(--surface-alt);
     border: 1px solid var(--border);
     border-radius: 999px;
-    padding: 9px 16px;
-    min-height: 40px;
+    padding: 12px 18px;
+    min-height: 46px;
     cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
     transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
   }
 
@@ -202,12 +204,12 @@
 
   textarea {
     font-family: inherit;
-    font-size: 0.95rem;
+    font-size: 1rem;
     color: var(--text);
     background: var(--surface-alt);
     border: 1px solid var(--border);
     border-radius: 12px;
-    padding: 10px 14px;
+    padding: 12px 14px;
     resize: vertical;
   }
 
@@ -218,12 +220,15 @@
 
   .btn-primary, .btn-secondary {
     font-family: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', sans-serif;
-    font-size: 0.95rem;
+    font-size: 1rem;
     font-weight: 500;
     border-radius: 999px;
-    padding: 13px 22px;
+    padding: 14px 22px;
+    min-height: 50px;
     cursor: pointer;
     border: 1px solid transparent;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
     transition: background 0.15s ease, transform 0.1s ease, border-color 0.15s ease;
   }
 
@@ -328,6 +333,29 @@
     gap: 10px;
   }
 
+  .output-actions .btn-primary,
+  .output-actions .btn-secondary {
+    flex: 1 1 140px;
+  }
+
+  .mobile-cta {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    padding: 12px clamp(16px, 4vw, 24px) calc(12px + env(safe-area-inset-bottom));
+    background: linear-gradient(to top, var(--bg) 65%, transparent);
+  }
+
+  .btn-block {
+    display: block;
+    width: 100%;
+    max-width: 720px;
+    margin: 0 auto;
+    box-shadow: var(--shadow);
+  }
+
   .reset-link {
     align-self: flex-start;
     background: none;
@@ -401,7 +429,6 @@
     </section>
 
     <p class="status-msg" id="statusMsg" aria-live="polite"></p>
-    <button type="submit" class="btn-primary" id="generateBtn">口コミ下書きを作成する</button>
   </form>
 
   <section class="card output-card" id="outputCard" hidden>
@@ -417,6 +444,10 @@
     </div>
   </section>
 </main>
+
+<div class="mobile-cta">
+  <button type="submit" form="reviewForm" class="btn-primary btn-block" id="generateBtn">口コミ下書きを作成する</button>
+</div>
 
 <script>
 (function () {
@@ -604,6 +635,7 @@
 
     if (!worries.length || !impressions.length || !changes.length) {
       statusMsg.textContent = '①③④は少なくとも1つずつ選んでください。';
+      statusMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
     statusMsg.textContent = '';
