@@ -617,10 +617,6 @@
     <a class="nav-item" data-target="section-persons">
       <span class="nav-icon">👤</span> 担当者別 KPI
     </a>
-    <div class="nav-group-label">分析</div>
-    <a class="nav-item" data-target="section-summary">
-      <span class="nav-icon">📋</span> サマリー表
-    </a>
   </nav>
 
   <div id="sidebar-main">
@@ -743,29 +739,6 @@
     <div class="person-cards" id="person-cards"></div>
   </div>
 
-  <!-- Charts -->
-  <!-- Summary Table -->
-  <div id="section-summary" class="section">
-    <div class="section-title">担当者別 主要KPIサマリー</div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>担当者</th>
-            <th>内定 目標</th>
-            <th>内定 結果</th>
-            <th>内定 達成率</th>
-            <th>1次選考 目標</th>
-            <th>1次選考 結果</th>
-            <th>1次 達成率</th>
-            <th>新規面談</th>
-            <th>提案数</th>
-          </tr>
-        </thead>
-        <tbody id="summary-body"></tbody>
-      </table>
-    </div>
-  </div>
 
 </div><!-- /container -->
 </div><!-- /sidebar-main -->
@@ -966,52 +939,6 @@ function renderDashboard(personsData, month) {
   const ichijTargets   = PERSONS.map(p => personsData[p][month]?.target?.['1次選考参加数'] ?? 0);
   const ichijResults   = PERSONS.map(p => personsData[p][month]?.result?.['1次選考参加数'] ?? 0);
 
-
-  // --- Summary Table ---
-  const summaryBody = document.getElementById('summary-body');
-  summaryBody.innerHTML = '';
-
-  let totMendan   = { target: 0, result: 0 };
-  let totTeian    = { target: 0, result: 0 };
-
-  PERSONS.forEach(p => {
-    const d = personsData[p][month];
-    if (!d) return;
-    const t = d.target; const r = d.result;
-
-    const naiteiP = pct(r['内定数'],        t['内定数']);
-    const ichijP  = pct(r['1次選考参加数'], t['1次選考参加数']);
-
-    totMendan.target += t['新規面談'] || 0;
-    totMendan.result += r['新規面談'] || 0;
-    totTeian.target  += t['提案数']   || 0;
-    totTeian.result  += r['提案数']   || 0;
-
-    summaryBody.innerHTML += `
-      <tr>
-        <td class="name">${p}</td>
-        <td>${t['内定数']}</td>
-        <td>${r['内定数']}</td>
-        <td><span class="badge ${badgeClass(naiteiP)}">${naiteiP}%</span></td>
-        <td>${t['1次選考参加数']}</td>
-        <td>${r['1次選考参加数']}</td>
-        <td><span class="badge ${badgeClass(ichijP)}">${ichijP}%</span></td>
-        <td>${r['新規面談']} / ${t['新規面談']}目標</td>
-        <td>${r['提案数']}</td>
-      </tr>`;
-  });
-
-  const totNaiteiPct2 = pct(totNaiteiResult, totNaiteiTarget);
-  const tot1jiPct2    = pct(tot1jiResult, tot1jiTarget);
-
-  summaryBody.innerHTML += `
-    <tr class="total-row">
-      <td class="name" style="text-align:left;">合計</td>
-      <td>${totNaiteiTarget}</td><td>${totNaiteiResult}</td><td>${totNaiteiPct2}%</td>
-      <td>${tot1jiTarget}</td><td>${tot1jiResult}</td><td>${tot1jiPct2}%</td>
-      <td>${totMendan.result} / ${totMendan.target}目標</td>
-      <td>${totTeian.result}</td>
-    </tr>`;
 
   // --- 直近3ヶ月 内定承諾数ランキング ---
   {
@@ -1613,7 +1540,7 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
   }
 
   // IntersectionObserver でスクロール位置に応じてハイライト
-  const sectionIds = ['section-27','section-naisho-rank','section-naisho-monthly','section-hero','section-persons','section-summary'];
+  const sectionIds = ['section-27','section-naisho-rank','section-naisho-monthly','section-hero','section-persons'];
   const observers = [];
   let currentActive = 'section-hero';
 
