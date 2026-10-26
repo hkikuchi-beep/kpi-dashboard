@@ -1246,11 +1246,11 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
 // ======================================================
 // 承諾実績テーブル（期ごとに切り替え）
 // 2期目は gid にシートのタブIDを入れると集計される（未設定の間は0スタート表示）
-// 同じシートに続ける場合は gid を 588019868 のままにして grad を '28卒' にする
+// 2期目は27卒・28卒の合算。1期目の27卒を含めないため、2期目専用のタブ（gid）が必要
 // ======================================================
 const TERMS = {
-  1: { label: '1期目', grad: '27卒', gid: '588019868' },
-  2: { label: '2期目', grad: '28卒', gid: null },
+  1: { label: '1期目', grads: ['27卒'], gid: '588019868' },
+  2: { label: '2期目', grads: ['27卒', '28卒'], gid: null },
 };
 window._term = Date.now() >= Date.parse('2026-11-01T00:00:00+09:00') ? 2 : 1;
 
@@ -1259,7 +1259,8 @@ async function loadSales() {
   const KPI_SHEET_ID    = '11Y_h32hfgbiz_3BWwV_NIGYJJyxJ5l6SnRB9pS6Iv2g';
   const T = TERMS[window._term];
   const myTerm = window._term;
-  const GRAD = T.grad;
+  const GRADS = T.grads;
+  const GRAD = GRADS.join('・');
   const SALES_GID = T.gid;
   const YOMI_GID        = '957811098'; // ヨミ表（最新）
   const ACTIVE_GID      = '37414720';
@@ -1316,14 +1317,13 @@ async function loadSales() {
     const rows = parseCSVSimple(text);
 
     // ヘッダー行を探す（「承諾人数（27卒）」が含まれる行）
-    let headerIdx = -1, nameColIdx = 0, count27ColIdx = -1, amt27ColIdx = -1;
+    let headerIdx = -1, nameColIdx = 0, gradCols = [];
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
-      const c27Idx = r.findIndex(c => c.includes(GRAD) && c.includes('承諾人数'));
-      if (c27Idx !== -1) {
+      const cols = GRADS.map(g => r.findIndex(c => c.includes(g) && c.includes('承諾人数'))).filter(idx => idx !== -1);
+      if (cols.length) {
         headerIdx = i;
-        count27ColIdx = c27Idx;
-        amt27ColIdx = c27Idx + 1;
+        gradCols = cols;
         break;
       }
     }
@@ -1337,8 +1337,8 @@ async function loadSales() {
       const advisor = (r[nameColIdx] || '').trim();
       if (!advisor) break;  // 集計セクション終了（空行）
       if (SKIP_NAMES.has(advisor)) continue;
-      const count  = parseInt(r[count27ColIdx]) || 0;
-      const rawAmt = parseFloat((r[amt27ColIdx] || '').replace(/[¥,]/g, '')) || 0;
+      const count  = gradCols.reduce((sum, c) => sum + (parseInt(r[c]) || 0), 0);
+      const rawAmt = gradCols.reduce((sum, c) => sum + (parseFloat((r[c + 1] || '').replace(/[¥,]/g, '')) || 0), 0);
       if (!advisorMap[advisor]) advisorMap[advisor] = { count: 0, total: 0 };
       advisorMap[advisor].count += count;
       advisorMap[advisor].total += rawAmt;
@@ -1363,7 +1363,7 @@ async function loadSales() {
           const year   = yc !== -1 ? (r[yc] || '').trim() : '';
           const status = sc !== -1 ? (r[sc] || '').trim() : '承諾';
           const amt    = parseFloat((r[ac2] || '').replace(/[¥,]/g, '')) || 0;
-          if (!month || year !== GRAD || amt === 0) continue;
+          if (!month || !GRADS.includes(year) || amt === 0) continue;
           if (status !== '承諾') continue;
           sbm[month] = (sbm[month] || 0) + amt;
         }
