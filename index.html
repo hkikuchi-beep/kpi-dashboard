@@ -314,6 +314,12 @@
       color: #ffffff;
       font-size: 15px;
     }
+    .term-toggle { display: inline-flex; gap: 4px; margin-right: 10px; }
+    .term-toggle button {
+      border: 1px solid rgba(255,255,255,0.6); background: transparent; color: #fff;
+      border-radius: 99px; padding: 3px 12px; font-size: 12px; font-weight: 700; cursor: pointer;
+    }
+    .term-toggle button.active { background: #fff; color: var(--accent); }
     .sbadge--white {
       background: rgba(255,255,255,0.2) !important;
       color: #ffffff !important;
@@ -629,7 +635,7 @@
         <span class="rvb-dot"></span>
         <span id="banner-month-label">当月</span>
         <span class="rvb-sep">|</span>
-        <span>27卒 承諾実績</span>
+        <span id="banner-grad">27卒 承諾実績</span>
       </div>
       <div class="rvb-figure">
         <span class="rvb-yen">¥</span>
@@ -644,8 +650,14 @@
   <div id="section-27" class="section">
     <div class="sales-section">
       <div class="sales-section-header sales-section-header--highlight">
-        <span class="stitle">🎓 27卒 承諾実績（アドバイザー別）</span>
-        <span class="sbadge sbadge--white" id="sales-total-badge">集計中...</span>
+        <span class="stitle" id="sales-title">🎓 27卒 承諾実績（アドバイザー別）</span>
+        <span>
+          <span class="term-toggle" id="term-toggle">
+            <button type="button" data-term="1">1期目</button>
+            <button type="button" data-term="2">2期目</button>
+          </span>
+          <span class="sbadge sbadge--white" id="sales-total-badge">集計中...</span>
+        </span>
       </div>
       <div style="overflow-x:auto;">
         <table class="sales-table">
@@ -807,7 +819,7 @@ function renderDashboard(personsData, month) {
   if (window._salesByMonth) {
     const amt = window._salesByMonth[month] || 0;
     const el = document.getElementById('banner-result');
-    if (el) el.textContent = amt ? Math.round(amt / 10000).toLocaleString() : '-';
+    if (el) el.textContent = amt ? Math.round(amt / 10000).toLocaleString() : '0';
     const lbl = document.getElementById('banner-month-label');
     if (lbl) lbl.textContent = month;
   }
@@ -1232,12 +1244,23 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
 })();
 
 // ======================================================
-// 27卒 承諾実績テーブル
+// 承諾実績テーブル（期ごとに切り替え）
+// 2期目は gid にシートのタブIDを入れると集計される（未設定の間は0スタート表示）
+// 同じシートに続ける場合は gid を 588019868 のままにして grad を '28卒' にする
 // ======================================================
-(async function() {
+const TERMS = {
+  1: { label: '1期目', grad: '27卒', gid: '588019868' },
+  2: { label: '2期目', grad: '28卒', gid: null },
+};
+window._term = Date.now() >= Date.parse('2026-11-01T00:00:00+09:00') ? 2 : 1;
+
+async function loadSales() {
   const SALES_SHEET_ID  = '1E3iQ6_jg8ohBJFShs7uRxFR1CtNygSYU7F-u8Qj_0nU';
   const KPI_SHEET_ID    = '11Y_h32hfgbiz_3BWwV_NIGYJJyxJ5l6SnRB9pS6Iv2g';
-  const SALES_GID       = '588019868';
+  const T = TERMS[window._term];
+  const myTerm = window._term;
+  const GRAD = T.grad;
+  const SALES_GID = T.gid;
   const YOMI_GID        = '957811098'; // ヨミ表（最新）
   const ACTIVE_GID      = '37414720';
   const SALES_URL  = `https://docs.google.com/spreadsheets/d/${SALES_SHEET_ID}/export?format=csv&gid=${SALES_GID}`;
@@ -1246,6 +1269,21 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
 
   const tbody = document.getElementById('sales-body');
   const badge = document.getElementById('sales-total-badge');
+
+  document.getElementById('sales-title').textContent = `🎓 ${GRAD} 承諾実績（アドバイザー別）`;
+  document.getElementById('banner-grad').textContent = `${T.label}・${GRAD} 承諾実績`;
+  document.querySelectorAll('#term-toggle button').forEach(b => b.classList.toggle('active', +b.dataset.term === myTerm));
+
+  if (!SALES_GID) {
+    window._salesByMonth = {};
+    const bn = document.getElementById('banner-result');
+    if (bn) bn.textContent = '0';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);padding:20px;">' + T.label + 'の承諾実績はまだありません（0件 / 0万円）</td></tr>';
+    badge.textContent = '0件 / 0万円';
+    return;
+  }
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);padding:20px;">読み込み中...</td></tr>';
+  badge.textContent = '集計中...';
 
   try {
     // 3シートを並行取得
@@ -1256,6 +1294,7 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
       yomiResp.ok ? yomiResp.text() : Promise.resolve(''),
       activeResp.ok ? activeResp.text() : Promise.resolve('')
     ]);
+    if (myTerm !== window._term) return;
 
     // CSVパース
     function parseCSVSimple(t) {
@@ -1280,7 +1319,7 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
     let headerIdx = -1, nameColIdx = 0, count27ColIdx = -1, amt27ColIdx = -1;
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
-      const c27Idx = r.findIndex(c => c.includes('27卒') && c.includes('承諾人数'));
+      const c27Idx = r.findIndex(c => c.includes(GRAD) && c.includes('承諾人数'));
       if (c27Idx !== -1) {
         headerIdx = i;
         count27ColIdx = c27Idx;
@@ -1324,7 +1363,7 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
           const year   = yc !== -1 ? (r[yc] || '').trim() : '';
           const status = sc !== -1 ? (r[sc] || '').trim() : '承諾';
           const amt    = parseFloat((r[ac2] || '').replace(/[¥,]/g, '')) || 0;
-          if (!month || year !== '27卒' || amt === 0) continue;
+          if (!month || year !== GRAD || amt === 0) continue;
           if (status !== '承諾') continue;
           sbm[month] = (sbm[month] || 0) + amt;
         }
@@ -1337,7 +1376,7 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
         const el = document.getElementById('banner-result');
         const lbl = document.getElementById('banner-month-label');
         const amt = sbm[m] || 0;
-        if (el) el.textContent = amt ? Math.round(amt / 10000).toLocaleString() : '-';
+        if (el) el.textContent = amt ? Math.round(amt / 10000).toLocaleString() : '0';
         if (lbl) lbl.textContent = m;
       }
     }
@@ -1414,7 +1453,7 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
     const sorted = Object.entries(advisorMap).sort((a, b) => b[1].total - a[1].total);
 
     if (sorted.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);padding:20px;">27卒承諾データなし</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);padding:20px;">' + GRAD + '承諾データなし</td></tr>';
       badge.textContent = '0件';
     } else {
       // 承諾実績テーブル描画
@@ -1516,7 +1555,16 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
     document.getElementById('sales-body').innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-secondary);padding:20px;">データ取得失敗: ${e.message}</td></tr>`;
     document.getElementById('sales-total-badge').textContent = 'エラー';
   }
-})();
+}
+
+document.querySelectorAll('#term-toggle button').forEach(b => {
+  b.addEventListener('click', () => {
+    if (+b.dataset.term === window._term) return;
+    window._term = +b.dataset.term;
+    loadSales();
+  });
+});
+loadSales();
 
 // ======================================================
 // Sidebar navigation
