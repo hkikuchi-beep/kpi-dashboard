@@ -812,7 +812,11 @@ function sum(personsData, month, field, type) {
 // ======================================================
 // Render dashboard for a given month
 // ======================================================
-function renderDashboard(personsData, month) {
+function renderDashboard(allPersonsData, month) {
+  const personsData = (window._term === 2 || isTerm2Month(month))
+    ? Object.fromEntries(Object.entries(allPersonsData).filter(([p]) => !TERM2_EXCLUDE.has(p)))
+    : allPersonsData;
+  const PLIST = PERSONS_LIST.filter(p => personsData[p]);
   const PERSONS = Object.keys(personsData);
 
   // --- Revenue banner（月変更時に同期）---
@@ -955,14 +959,14 @@ function renderDashboard(personsData, month) {
   // --- 直近3ヶ月 内定承諾数ランキング ---
   {
     const EXCLUDE = new Set(['菊池']);
-    const allMonths = PERSONS_LIST.length ? Object.keys(personsData[PERSONS_LIST[0]] || {}) : [];
+    const allMonths = PLIST.length ? Object.keys(personsData[PLIST[0]] || {}) : [];
     const toNum = m => parseInt(m.replace('月', '')) || 0;
     const curMonthNum = toNum(month);
     const sortedMonths = [...allMonths].sort((a, b) => toNum(a) - toNum(b));
     const upToCur = sortedMonths.filter(m => toNum(m) <= curMonthNum);
     const last3 = upToCur.slice(-3);
 
-    const rankScores = PERSONS_LIST
+    const rankScores = PLIST
       .filter(p => !EXCLUDE.has(p))
       .map(p => {
         const total = last3.reduce((s, m) => {
@@ -994,7 +998,7 @@ function renderDashboard(personsData, month) {
   // --- 今月の内定承諾数ランキング ---
   {
     const EXCLUDE = new Set(['菊池']);
-    const monthlyScores = PERSONS_LIST
+    const monthlyScores = PLIST
       .filter(p => !EXCLUDE.has(p))
       .map(p => {
         const d = personsData[p]?.[month];
@@ -1049,6 +1053,7 @@ function buildMonthSelector(months, personsData) {
     const defaultMonth = exact || nearest || months[0];
 
     sel.value = defaultMonth;
+    window._allPersons = personsData;
     renderDashboard(personsData, sel.value);
   }
   sel.addEventListener('change', () => renderDashboard(personsData, sel.value));
@@ -1083,6 +1088,10 @@ const CSV_URL  = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?form
 
 // ダッシュボードに表示する担当者（表示順）
 const PERSONS_LIST = ['渡辺', '田中', '永田', '志村', '横山'];
+
+// 2期目（11月〜）から表示しない担当者
+const TERM2_EXCLUDE = new Set(['田中']);
+const isTerm2Month = m => (parseInt(String(m).replace('月', '')) || 0) >= 11;
 
 // パーサーが「担当者名ではない」と判断するパターン
 // → これ以外の空でないcol0はすべて担当者名として扱う
@@ -1250,7 +1259,7 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
 // ======================================================
 const TERMS = {
   1: { label: '1期目', grads: ['27卒'], gid: '588019868' },
-  2: { label: '2期目', grads: ['27卒', '28卒'], gid: null },
+  2: { label: '2期目', grads: ['27卒', '28卒'], gid: null, exclude: ['田中'] },
 };
 window._term = Date.now() >= Date.parse('2026-11-01T00:00:00+09:00') ? 2 : 1;
 
@@ -1331,7 +1340,7 @@ async function loadSales() {
 
     // アドバイザー別に27卒承諾人数・金額を集計
     const advisorMap = {};
-    const SKIP_NAMES = new Set(['合計', 'Total', '合　計']);
+    const SKIP_NAMES = new Set(['合計', 'Total', '合　計', ...(T.exclude || [])]);
     for (let i = headerIdx + 1; i < rows.length; i++) {
       const r = rows[i];
       const advisor = (r[nameColIdx] || '').trim();
@@ -1562,6 +1571,7 @@ document.querySelectorAll('#term-toggle button').forEach(b => {
     if (+b.dataset.term === window._term) return;
     window._term = +b.dataset.term;
     loadSales();
+    if (window._allPersons) renderDashboard(window._allPersons, document.getElementById('monthSelect').value);
   });
 });
 loadSales();
