@@ -812,6 +812,17 @@ function sum(personsData, month, field, type) {
 // ======================================================
 // Render dashboard for a given month
 // ======================================================
+// 2期目はKPIシートに11月以降がまだ無い間、今月（暦）の売上を表示する
+function syncRevenueBanner(selMonth) {
+  if (!window._salesByMonth) return;
+  const m = (window._term === 2 && !isTerm2Month(selMonth)) ? `${new Date().getMonth() + 1}月` : selMonth;
+  const amt = window._salesByMonth[m] || 0;
+  const el = document.getElementById('banner-result');
+  if (el) el.textContent = amt ? Math.round(amt / 10000).toLocaleString() : '0';
+  const lbl = document.getElementById('banner-month-label');
+  if (lbl) lbl.textContent = m;
+}
+
 function renderDashboard(allPersonsData, month) {
   const personsData = (window._term === 2 || isTerm2Month(month))
     ? Object.fromEntries(Object.entries(allPersonsData).filter(([p]) => !TERM2_EXCLUDE.has(p)))
@@ -820,13 +831,7 @@ function renderDashboard(allPersonsData, month) {
   const PERSONS = Object.keys(personsData);
 
   // --- Revenue banner（月変更時に同期）---
-  if (window._salesByMonth) {
-    const amt = window._salesByMonth[month] || 0;
-    const el = document.getElementById('banner-result');
-    if (el) el.textContent = amt ? Math.round(amt / 10000).toLocaleString() : '0';
-    const lbl = document.getElementById('banner-month-label');
-    if (lbl) lbl.textContent = month;
-  }
+  syncRevenueBanner(month);
 
   // --- Hero cards ---
   const totNaiteiTarget = sum(personsData, month, '最終参加数', 'target');
@@ -1255,11 +1260,11 @@ document.getElementById('updated').textContent = new Date().toLocaleString('ja-J
 // ======================================================
 // 承諾実績テーブル（期ごとに切り替え）
 // 2期目は gid にシートのタブIDを入れると集計される（未設定の間は0スタート表示）
-// 2期目は27卒・28卒の合算。1期目の27卒を含めないため、2期目専用のタブ（gid）が必要
+// 2期目は27卒・28卒の合算。2期目専用タブ「2026.11月~承諾者管理」
 // ======================================================
 const TERMS = {
   1: { label: '1期目', grads: ['27卒'], gid: '588019868' },
-  2: { label: '2期目', grads: ['27卒', '28卒'], gid: null, exclude: ['田中'] },
+  2: { label: '2期目', grads: ['27卒', '28卒'], gid: '738575938', exclude: ['田中'] },
 };
 window._term = Date.now() >= Date.parse('2026-11-01T00:00:00+09:00') ? 2 : 1;
 
@@ -1286,8 +1291,7 @@ async function loadSales() {
 
   if (!SALES_GID) {
     window._salesByMonth = {};
-    const bn = document.getElementById('banner-result');
-    if (bn) bn.textContent = '0';
+    syncRevenueBanner(document.getElementById('monthSelect').value);
     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);padding:20px;">' + T.label + 'の承諾実績はまだありません（0件 / 0万円）</td></tr>';
     badge.textContent = '0件 / 0万円';
     return;
@@ -1380,14 +1384,7 @@ async function loadSales() {
       window._salesByMonth = sbm;
       // 現在選択中の月でバナーを即時更新
       const curSel = document.getElementById('monthSelect');
-      if (curSel && curSel.value) {
-        const m = curSel.value;
-        const el = document.getElementById('banner-result');
-        const lbl = document.getElementById('banner-month-label');
-        const amt = sbm[m] || 0;
-        if (el) el.textContent = amt ? Math.round(amt / 10000).toLocaleString() : '0';
-        if (lbl) lbl.textContent = m;
-      }
+      if (curSel && curSel.value) syncRevenueBanner(curSel.value);
     }
 
     // ---- ヨミ表パース（担当CAごとに人数を集計）----
