@@ -624,14 +624,14 @@
     <a class="nav-item active" data-target="section-27">
       <span class="nav-icon">🎓</span> 27卒 承諾実績
     </a>
+    <a class="nav-item" id="nav-forecast" data-target="section-forecast" style="display:none;">
+      <span class="nav-icon">🔮</span> 売上予測（2期目）
+    </a>
     <a class="nav-item" data-target="section-naisho-rank">
       <span class="nav-icon">🏆</span> 承諾ランキング（3ヶ月）
     </a>
     <a class="nav-item" data-target="section-naisho-monthly">
       <span class="nav-icon">📅</span> 承諾ランキング（今月）
-    </a>
-    <a class="nav-item" id="nav-forecast" data-target="section-forecast" style="display:none;">
-      <span class="nav-icon">🔮</span> 売上予測（2期目）
     </a>
     <div class="nav-group-label">概要</div>
     <a class="nav-item" data-target="section-hero">
@@ -697,32 +697,6 @@
     </div>
   </div>
 
-  <!-- 直近3ヶ月 内定承諾数ランキング -->
-  <div id="section-naisho-rank" class="section">
-    <div class="sales-section">
-      <div class="sales-section-header">
-        <span class="stitle">🏆 直近3ヶ月 内定承諾数ランキング</span>
-        <span class="sbadge" id="naisho-rank-badge">集計中...</span>
-      </div>
-      <div class="naisho-rank-row" id="naisho-rank-row">
-        <div style="color:var(--text-secondary);padding:20px;font-size:13px;">読み込み中...</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 今月の内定承諾数ランキング -->
-  <div id="section-naisho-monthly" class="section">
-    <div class="sales-section">
-      <div class="sales-section-header">
-        <span class="stitle">📅 今月の内定承諾数ランキング</span>
-        <span class="sbadge" id="naisho-monthly-badge">集計中...</span>
-      </div>
-      <div class="naisho-rank-row" id="naisho-monthly-row">
-        <div style="color:var(--text-secondary);padding:20px;font-size:13px;">読み込み中...</div>
-      </div>
-    </div>
-  </div>
-
   <!-- 売上予測（2期目） -->
   <div id="section-forecast" class="section" style="display:none;">
     <div class="sales-section">
@@ -749,6 +723,32 @@
         <table class="sales-table" id="fc-ca"><tbody><tr><td style="text-align:center;color:var(--text-secondary);padding:20px;">読み込み中...</td></tr></tbody></table>
       </div>
       <div class="fc-note" id="fc-note"></div>
+    </div>
+  </div>
+
+  <!-- 直近3ヶ月 内定承諾数ランキング -->
+  <div id="section-naisho-rank" class="section">
+    <div class="sales-section">
+      <div class="sales-section-header">
+        <span class="stitle">🏆 直近3ヶ月 内定承諾数ランキング</span>
+        <span class="sbadge" id="naisho-rank-badge">集計中...</span>
+      </div>
+      <div class="naisho-rank-row" id="naisho-rank-row">
+        <div style="color:var(--text-secondary);padding:20px;font-size:13px;">読み込み中...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 今月の内定承諾数ランキング -->
+  <div id="section-naisho-monthly" class="section">
+    <div class="sales-section">
+      <div class="sales-section-header">
+        <span class="stitle">📅 今月の内定承諾数ランキング</span>
+        <span class="sbadge" id="naisho-monthly-badge">集計中...</span>
+      </div>
+      <div class="naisho-rank-row" id="naisho-monthly-row">
+        <div style="color:var(--text-secondary);padding:20px;font-size:13px;">読み込み中...</div>
+      </div>
     </div>
   </div>
 
@@ -1834,7 +1834,7 @@ loadSales();
   }
 
   // IntersectionObserver でスクロール位置に応じてハイライト
-  const sectionIds = ['section-27','section-naisho-rank','section-naisho-monthly','section-forecast','section-hero','section-persons'];
+  const sectionIds = ['section-27','section-forecast','section-naisho-rank','section-naisho-monthly','section-hero','section-persons'];
   const observers = [];
   let currentActive = 'section-hero';
 
