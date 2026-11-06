@@ -350,6 +350,21 @@
     .sales-bar-bg   { background: var(--bg); border-radius: 99px; height: 5px; margin-top: 5px; }
     .sales-bar-fill { height: 5px; border-radius: 99px; background: var(--accent); }
 
+    /* ---- 売上予測（2期目） ---- */
+    .fc-toggle { display: inline-flex; gap: 4px; margin-left: 8px; }
+    .fc-toggle button {
+      border: 1px solid rgba(255,255,255,0.6); background: transparent; color: #fff;
+      border-radius: 99px; padding: 3px 12px; font-size: 12px; font-weight: 700; cursor: pointer;
+    }
+    .fc-toggle button.active { background: #fff; color: var(--accent); }
+    .fc-sub { padding: 14px 20px 6px; font-size: 12px; font-weight: 700; color: var(--text-primary); }
+    .fc-note { padding: 12px 20px 14px; font-size: 11px; color: var(--text-secondary); line-height: 1.8; border-top: 1px solid var(--border); }
+    .fc-note summary { cursor: pointer; font-weight: 700; color: var(--accent-dk); }
+    .fc-small { display: block; font-size: 11px; font-weight: 400; color: var(--text-secondary); margin-top: 2px; }
+    .fc-num { font-size: 20px; font-weight: 900; color: var(--accent); }
+    .fc-num--main { color: var(--text-primary); }
+    #fc-team td.fc-hl, #fc-ca td.fc-hl { background: #f4fbf8; }
+
     /* ---- Sidebar ---- */
     .layout-wrap { display: flex; align-items: flex-start; min-height: calc(100vh - 54px); }
 
@@ -615,6 +630,9 @@
     <a class="nav-item" data-target="section-naisho-monthly">
       <span class="nav-icon">📅</span> 承諾ランキング（今月）
     </a>
+    <a class="nav-item" id="nav-forecast" data-target="section-forecast" style="display:none;">
+      <span class="nav-icon">🔮</span> 売上予測（2期目）
+    </a>
     <div class="nav-group-label">概要</div>
     <a class="nav-item" data-target="section-hero">
       <span class="nav-icon">⭐</span> 最重要KPI
@@ -702,6 +720,35 @@
       <div class="naisho-rank-row" id="naisho-monthly-row">
         <div style="color:var(--text-secondary);padding:20px;font-size:13px;">読み込み中...</div>
       </div>
+    </div>
+  </div>
+
+  <!-- 売上予測（2期目） -->
+  <div id="section-forecast" class="section" style="display:none;">
+    <div class="sales-section">
+      <div class="sales-section-header sales-section-header--highlight">
+        <span class="stitle">🔮 売上予測（2期目・12月／1月）</span>
+        <span>
+          <span class="fc-toggle" id="fc-scenario">
+            <button type="button" data-sc="悲観">悲観</button>
+            <button type="button" data-sc="標準" class="active">標準</button>
+            <button type="button" data-sc="楽観">楽観</button>
+          </span>
+          <span class="fc-toggle" id="fc-unit">
+            <button type="button" data-unit="B" class="active">実績平均単価</button>
+            <button type="button" data-unit="A">70万円</button>
+          </span>
+        </span>
+      </div>
+      <div class="fc-sub">チーム合計（承諾数予測・売上予測）</div>
+      <div style="overflow-x:auto;">
+        <table class="sales-table" id="fc-team"><tbody><tr><td style="text-align:center;color:var(--text-secondary);padding:20px;">読み込み中...</td></tr></tbody></table>
+      </div>
+      <div class="fc-sub">アドバイザー別 承諾数予測</div>
+      <div style="overflow-x:auto;">
+        <table class="sales-table" id="fc-ca"><tbody><tr><td style="text-align:center;color:var(--text-secondary);padding:20px;">読み込み中...</td></tr></tbody></table>
+      </div>
+      <div class="fc-note" id="fc-note"></div>
     </div>
   </div>
 
@@ -1276,7 +1323,7 @@ async function loadSales() {
   const GRADS = T.grads;
   const GRAD = GRADS.join('・');
   const SALES_GID = T.gid;
-  const YOMI_GID        = '957811098'; // ヨミ表（最新）
+  const YOMI_GID        = '1639100287'; // ヨミ表（最新）＝「2026.11月YOMI」タブ。月が変わったら新しい月のタブのgidに更新する
   const ACTIVE_GID      = '37414720';
   const SALES_URL  = `https://docs.google.com/spreadsheets/d/${SALES_SHEET_ID}/export?format=csv&gid=${SALES_GID}`;
   const YOMI_URL   = `https://docs.google.com/spreadsheets/d/${SALES_SHEET_ID}/export?format=csv&gid=${YOMI_GID}`;
@@ -1413,6 +1460,11 @@ async function loadSales() {
         yomiMap[advisor] = (yomiMap[advisor] || 0) + 1;
       }
     }
+
+    // ---- 売上予測用：2期目の実績承諾とヨミ表の期待承諾（担当CA別）----
+    try {
+      if (myTerm === 2) { window._fcLive = fcBuildLive(yomiRows, yomiColMap, yomiHeaderIdx, advisorMap); renderForecast(); }
+    } catch (e) { console.warn('売上予測の実績連携に失敗', e); }
 
     // ---- アクティブ人数・面談数パース（ＣＡ行セクションから）----
     const activeMap = {};
@@ -1563,14 +1615,201 @@ async function loadSales() {
   }
 }
 
+
+// ======================================================
+// 売上予測（2期目・12月／1月）
+// 売上予測モデル v0.2（2026/11/6時点）を移植。前提は下の FC を編集して更新する。
+// 2期目表示の方針に合わせて、田中さんを除く4名（渡辺・永田・志村・横山）で集計。
+// ======================================================
+const FC = {
+  asOf: '2026/11/6',
+  cas: ['渡辺', '永田', '志村', '横山'],
+  unit: { A: 70, B: 62 },              // 万円/承諾（B＝直近3か月の実績平均）
+  scen: {
+    '標準': { rate28: 0.0125, rate27: 0.035, lag: [0.20, 0.45, 0.35], yomi: 1.0 },
+    '楽観': { rate28: 0.015,  rate27: 0.040, lag: [0.30, 0.45, 0.25], yomi: 1.2 },
+    '悲観': { rate28: 0.010,  rate27: 0.030, lag: [0.10, 0.40, 0.50], yomi: 0.7 },
+  },
+  // 28卒の応募承諾：0Q（8〜10月）合計と、11月（〜11/6）の実績（アドバイザー別）
+  a28q0:  { '渡辺': 115, '永田': 148, '志村': 124, '横山': 117 },
+  a28nov: { '渡辺': 13,  '永田': 24,  '志村': 37,  '横山': 35  },
+  novDays: 6,
+  decFactor: 400 / 545,                // 12月の応募承諾＝11月ペース×この係数（仮置き）
+  // 27卒の決定率（承諾÷応募承諾・年間KPI 27卒）→個人差は半分だけ反映
+  conv27: { '渡辺': [38, 1002], '永田': [23, 879], '志村': [30, 935], '横山': [23, 652] },
+  // 27卒の残り分（4名計・月別の応募承諾は推定）
+  tail27: { sep: 293, oct: 168, nov: 80, dec: 40 },
+  tailFallbackShare: { '渡辺': 226, '永田': 231, '志村': 215, '横山': 207 },   // 27卒 7〜9月の応募承諾
+  // ヨミ表の確率（11月内に承諾する確率・承諾ランク◎基準）と承諾ランク係数
+  yomiPhaseP: { '内定': 0.80, '最終予定': 0.45, '最終前面談': 0.35, '最終設定中': 0.30, '3次予定': 0.15, '1次予定': 0.05 },
+  rankMult: { '◎': 1.00, '〇': 0.90, '○': 0.90, '△': 0.75, '-': 0.80, '': 0.80 },
+};
+window._fcScenario = '標準';
+window._fcUnit = 'B';
+window._fcLive = null;
+
+function fcBuildLive(yomiRows, colMap, hi, advisorMap) {
+  const live = { actual: {}, yomiExp: {}, yomiOk: false };
+  Object.entries(advisorMap || {}).forEach(([n, d]) => { live.actual[n] = d.count; });
+  if (hi !== -1) {
+    const cPhase = colMap['選考フェーズ'], cCA = colMap['担当CA'], cCo = colMap['企業名'], cRank = colMap['承諾ランク'];
+    if (cPhase !== undefined && cCA !== undefined && cCo !== undefined) {
+      let lastCA = '';
+      for (let i = hi + 1; i < yomiRows.length; i++) {
+        const r = yomiRows[i];
+        if (!(r[cCo] || '').trim()) continue;
+        const ca = (r[cCA] || '').trim() || lastCA;
+        if (!ca) continue;
+        lastCA = ca;
+        const p = FC.yomiPhaseP[(r[cPhase] || '').trim()];
+        if (p === undefined) continue;     // 承諾済み・不明フェーズは対象外（既承諾との二重計上を避ける）
+        const rk = (r[cRank] || '').trim();
+        const m = FC.rankMult[rk] !== undefined ? FC.rankMult[rk] : FC.rankMult['-'];
+        live.yomiExp[ca] = (live.yomiExp[ca] || 0) + p * m;
+      }
+      live.yomiOk = Object.keys(live.yomiExp).length > 0;
+    }
+  }
+  return live;
+}
+
+function fcCompute(scName) {
+  const s = FC.scen[scName];
+  const [l1, l2, l3] = s.lag;
+  const live = window._fcLive;
+  const teamConv = FC.cas.reduce((a, c) => a + FC.conv27[c][0], 0) / FC.cas.reduce((a, c) => a + FC.conv27[c][1], 0);
+  // 27卒の残り（チーム）
+  const t = FC.tail27;
+  const tail = [
+    s.rate27 * (t.nov * l1 + t.oct * l2 + t.sep * l3),
+    s.rate27 * (t.dec * l1 + t.nov * l2 + t.oct * l3),
+  ];
+  // 27卒の残りの按分（ヨミ表の期待承諾 → なければ27卒の応募承諾）
+  const useYomi = !!(live && live.yomiOk);
+  const wsrc = FC.cas.map(c => useYomi ? (live.yomiExp[c] || 0) : FC.tailFallbackShare[c]);
+  const wsum = wsrc.reduce((a, b) => a + b, 0) || 1;
+  const out = { ca: {}, team: { n28: [0, 0], tail: [tail[0], tail[1]] } };
+  FC.cas.forEach((c, i) => {
+    const idx = 0.5 + 0.5 * ((FC.conv27[c][0] / FC.conv27[c][1]) / teamConv);
+    const oct = FC.a28q0[c] / 3, sep = oct;
+    const nov = FC.a28nov[c] / FC.novDays * 30;
+    const dec = nov * FC.decFactor;
+    const n28 = [
+      s.rate28 * idx * (nov * l1 + oct * l2 + sep * l3),
+      s.rate28 * idx * (dec * l1 + nov * l2 + oct * l3),
+    ];
+    const share = wsrc[i] / wsum;
+    const tl = [tail[0] * share, tail[1] * share];
+    let nov25 = null, novExp = null;
+    if (live) {
+      nov25 = live.actual[c] || 0;
+      if (live.yomiOk) novExp = nov25 + (live.yomiExp[c] || 0) * s.yomi;
+    }
+    out.ca[c] = { n28, tail: tl, tot: [n28[0] + tl[0], n28[1] + tl[1]], novActual: nov25, novForecast: novExp };
+    out.team.n28[0] += n28[0]; out.team.n28[1] += n28[1];
+  });
+  return out;
+}
+
+function renderForecast() {
+  const sec = document.getElementById('section-forecast');
+  const nav = document.getElementById('nav-forecast');
+  if (!sec) return;
+  const show = window._term === 2;
+  sec.style.display = show ? '' : 'none';
+  if (nav) nav.style.display = show ? '' : 'none';
+  if (!show) return;
+
+  const sc = window._fcScenario, unit = FC.unit[window._fcUnit];
+  document.querySelectorAll('#fc-scenario button').forEach(b => b.classList.toggle('active', b.dataset.sc === sc));
+  document.querySelectorAll('#fc-unit button').forEach(b => b.classList.toggle('active', b.dataset.unit === window._fcUnit));
+
+  const cur = fcCompute(sc), lo = fcCompute('悲観'), hi = fcCompute('楽観');
+  const f1 = v => v.toFixed(1), f0 = v => Math.round(v).toLocaleString();
+  const rng = (a, b) => `<span class="fc-small">幅 ${f1(a)}〜${f1(b)}</span>`;
+  const tot = o => [o.team.n28[0] + o.team.tail[0], o.team.n28[1] + o.team.tail[1]];
+  const sum2 = a => a[0] + a[1];
+
+  // ---- チーム合計 ----
+  const rows = [
+    { label: '28卒（主予測）', cur: cur.team.n28, lo: lo.team.n28, hi: hi.team.n28, main: true },
+    { label: '27卒の残り（参考）', cur: cur.team.tail, lo: lo.team.tail, hi: hi.team.tail },
+    { label: '合計', cur: tot(cur), lo: tot(lo), hi: tot(hi), total: true },
+  ];
+  const cell = (v, l, h, big) => `<td><span class="${big ? 'fc-num fc-num--main' : 'fc-num'}">${f1(v)}</span><span class="sales-unit">件</span>${rng(l, h)}</td>`;
+  const rev = v => `<td><span class="sales-amount">${f0(v * unit)}</span><span class="sales-unit">万円</span></td>`;
+  document.getElementById('fc-team').innerHTML = `
+    <thead><tr>
+      <th>区分</th><th>12月 承諾</th><th>12月 売上</th><th>1月 承諾</th><th>1月 売上</th><th>12〜1月 承諾</th><th>12〜1月 売上</th>
+    </tr></thead>
+    <tbody>` + rows.map(r => `
+      <tr class="${r.total ? 'sales-total' : ''}">
+        <td>${r.label}</td>
+        ${cell(r.cur[0], r.lo[0], r.hi[0], r.total)}${rev(r.cur[0])}
+        ${cell(r.cur[1], r.lo[1], r.hi[1], r.total)}${rev(r.cur[1])}
+        ${cell(sum2(r.cur), sum2(r.lo), sum2(r.hi), r.total)}${rev(sum2(r.cur))}
+      </tr>`).join('') + `</tbody>`;
+
+  // ---- アドバイザー別 ----
+  const caRows = FC.cas.map(c => {
+    const d = cur.ca[c], l = lo.ca[c], h = hi.ca[c];
+    const nov = d.novForecast !== null
+      ? `<span class="fc-num" style="font-size:16px;">${f1(d.novForecast)}</span><span class="sales-unit">件</span><span class="fc-small">実績 ${d.novActual}件</span>`
+      : (d.novActual !== null ? `<span style="color:var(--text-secondary);">—</span><span class="fc-small">実績 ${d.novActual}件</span>` : '<span style="color:var(--text-secondary);">—</span>');
+    const m = (i, big) => `<td class="fc-hl"><span class="fc-num${big ? ' fc-num--main' : ''}">${f1(d.tot[i])}</span><span class="sales-unit">件</span><span class="fc-small">28卒 ${f1(d.n28[i])} ／ 幅 ${f1(l.tot[i])}〜${f1(h.tot[i])}</span></td>`;
+    const two = d.tot[0] + d.tot[1], twoLo = l.tot[0] + l.tot[1], twoHi = h.tot[0] + h.tot[1];
+    return `<tr>
+      <td>${c}</td>
+      <td>${nov}</td>
+      ${m(0)}${m(1)}
+      <td><span class="fc-num fc-num--main">${f1(two)}</span><span class="sales-unit">件</span><span class="fc-small">幅 ${f1(twoLo)}〜${f1(twoHi)}</span></td>
+      <td><span class="sales-amount">${f0(two * unit)}</span><span class="sales-unit">万円</span></td>
+    </tr>`;
+  }).join('');
+  const t0 = FC.cas.reduce((a, c) => a + cur.ca[c].tot[0], 0), t1 = FC.cas.reduce((a, c) => a + cur.ca[c].tot[1], 0);
+  document.getElementById('fc-ca').innerHTML = `
+    <thead><tr>
+      <th>アドバイザー</th><th>11月 見込み</th><th>12月 予測</th><th>1月 予測</th><th>12〜1月 承諾</th><th>12〜1月 売上</th>
+    </tr></thead>
+    <tbody>${caRows}
+      <tr class="sales-total">
+        <td>合計</td><td>—</td>
+        <td><span class="fc-num fc-num--main">${f1(t0)}</span><span class="sales-unit">件</span></td>
+        <td><span class="fc-num fc-num--main">${f1(t1)}</span><span class="sales-unit">件</span></td>
+        <td><span class="fc-num fc-num--main">${f1(t0 + t1)}</span><span class="sales-unit">件</span></td>
+        <td><span class="sales-amount">${f0((t0 + t1) * unit)}</span><span class="sales-unit">万円</span></td>
+      </tr>
+    </tbody>`;
+
+  const live = window._fcLive;
+  document.getElementById('fc-note').innerHTML = `
+    <div>※ 試算（${FC.asOf}時点の入力）。件数は小数1桁、幅は悲観〜楽観。売上＝承諾数×${window._fcUnit === 'A' ? '70万円（指定単価）' : FC.unit.B + '万円（直近3か月の実績平均単価）'}。対象は渡辺・永田・志村・横山（2期目の表示方針に合わせ、田中さんを除く）。</div>
+    <div>※ 11月 見込み＝今月の実績承諾＋ヨミ表の残件の期待承諾${live && live.yomiOk ? '' : '（ヨミ表を読み込めなかったため非表示）'}。</div>
+    <details style="margin-top:6px;">
+      <summary>予測の考え方と前提（クリックで開く）</summary>
+      <div style="margin-top:6px;">
+        ・28卒（主予測）＝決定率（悲観1.0%／標準1.25%／楽観1.5%）× 月別の応募承諾（1か月後20%・2か月後45%・3か月後35%のラグ配分）。昨年12月・1月は承諾と応募承諾の関係を示すデータがないため、決定率を置いて計算。個人差は27卒の決定率の違いを半分だけ反映（サンプルが少ないため）。<br>
+        ・27卒の残り＝27卒の決定率3.5%（悲観3.0%／楽観4.0%）× 応募承諾（ラグ配分）。アドバイザーへはヨミ表の期待承諾の比率で按分。<br>
+        ・応募承諾の月別実績が残っていないため、0Q（8〜10月）は3等分、12月は11月ペースの約73%と仮置き。実数が分かれば置き換えて精度が上がります。<br>
+        ・2月以降は27卒の同月×成長係数で別途試算（売上予測モデル v0.2.xlsx）。
+      </div>
+    </details>`;
+}
+
+document.querySelectorAll('#fc-scenario button').forEach(b => b.addEventListener('click', () => { window._fcScenario = b.dataset.sc; renderForecast(); }));
+document.querySelectorAll('#fc-unit button').forEach(b => b.addEventListener('click', () => { window._fcUnit = b.dataset.unit; renderForecast(); }));
+
 document.querySelectorAll('#term-toggle button').forEach(b => {
   b.addEventListener('click', () => {
     if (+b.dataset.term === window._term) return;
     window._term = +b.dataset.term;
+    window._fcLive = null;
+    renderForecast();
     loadSales();
     if (window._allPersons) renderDashboard(window._allPersons, document.getElementById('monthSelect').value);
   });
 });
+renderForecast();
 loadSales();
 
 // ======================================================
@@ -1595,7 +1834,7 @@ loadSales();
   }
 
   // IntersectionObserver でスクロール位置に応じてハイライト
-  const sectionIds = ['section-27','section-naisho-rank','section-naisho-monthly','section-hero','section-persons'];
+  const sectionIds = ['section-27','section-naisho-rank','section-naisho-monthly','section-forecast','section-hero','section-persons'];
   const observers = [];
   let currentActive = 'section-hero';
 
