@@ -364,6 +364,13 @@
     .fc-num { font-size: 20px; font-weight: 900; color: var(--accent); }
     .fc-num--main { color: var(--text-primary); }
     #fc-team td.fc-hl, #fc-ca td.fc-hl { background: #f4fbf8; }
+    .fc-sub--row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+    .fc-toggle--light button { border-color: var(--accent); color: var(--accent); }
+    .fc-toggle--light button.active { background: var(--accent); color: #fff; }
+    .fc-tag { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 99px; margin-left: 6px; vertical-align: middle; }
+    .fc-tag--act { background: #e6f4ec; color: #1a7a4a; }
+    .fc-tag--now { background: #fff3e0; color: #c47800; }
+    #fc2-month tr.fc2-cur td, #fc2-month tr.fc2-act td { background: #f4fbf8; }
 
     /* ---- Sidebar ---- */
     .layout-wrap { display: flex; align-items: flex-start; min-height: calc(100vh - 54px); }
@@ -701,7 +708,7 @@
   <div id="section-forecast" class="section" style="display:none;">
     <div class="sales-section">
       <div class="sales-section-header sales-section-header--highlight">
-        <span class="stitle">🔮 売上予測（2期目・12月／1月）</span>
+        <span class="stitle">🔮 売上予測（2期目）</span>
         <span>
           <span class="fc-toggle" id="fc-scenario">
             <button type="button" data-sc="悲観">悲観</button>
@@ -723,6 +730,23 @@
         <table class="sales-table" id="fc-ca"><tbody><tr><td style="text-align:center;color:var(--text-secondary);padding:20px;">読み込み中...</td></tr></tbody></table>
       </div>
       <div class="fc-note" id="fc-note"></div>
+
+      <div class="fc-sub fc-sub--row" style="border-top:1px solid var(--border);margin-top:6px;">
+        <span>📈 2期目 月別の売上予測（11月〜10月・4人合計）</span>
+        <span class="fc-toggle fc-toggle--light" id="fc2-scenario">
+          <button type="button" data-sc="現状維持">現状維持</button>
+          <button type="button" data-sc="改善込み" class="active">改善込み</button>
+          <button type="button" data-sc="上振れ">上振れ</button>
+        </span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="sales-table" id="fc2-month"><tbody><tr><td style="text-align:center;color:var(--text-secondary);padding:20px;">読み込み中...</td></tr></tbody></table>
+      </div>
+      <div class="fc-sub">アドバイザー別 2期目通年の見込みと順位</div>
+      <div style="overflow-x:auto;">
+        <table class="sales-table" id="fc2-ca"><tbody><tr><td style="text-align:center;color:var(--text-secondary);padding:20px;">読み込み中...</td></tr></tbody></table>
+      </div>
+      <div class="fc-note" id="fc2-note"></div>
     </div>
   </div>
 
@@ -1413,9 +1437,12 @@ async function loadSales() {
         if (mi !== -1 && ai !== -1) { dhi = i; mc = mi; ac2 = ai; yc = yi; break; }
       }
       const sbm = {};
+      let byCA = {};
       if (dhi !== -1) {
         const dh = rows[dhi];
         const sc = dh.findIndex(v => v.includes('承諾') && v.includes('辞退'));
+        const advCol = dh.indexOf('担当');
+        byCA = {};
         for (let i = dhi + 1; i < rows.length; i++) {
           const r = rows[i];
           if (!r[0] || isNaN(parseInt(r[0]))) break;
@@ -1426,9 +1453,15 @@ async function loadSales() {
           if (!month || !GRADS.includes(year) || amt === 0) continue;
           if (status !== '承諾') continue;
           sbm[month] = (sbm[month] || 0) + amt;
+          const adv = advCol !== -1 ? (r[advCol] || '').trim() : '';
+          if (adv) {
+            const o = ((byCA[adv] = byCA[adv] || {})[month] = byCA[adv][month] || { count: 0, amt: 0 });
+            o.count += 1; o.amt += amt;
+          }
         }
       }
       window._salesByMonth = sbm;
+      window._termActual = myTerm === 2 ? byCA : null;
       // 現在選択中の月でバナーを即時更新
       const curSel = document.getElementById('monthSelect');
       if (curSel && curSel.value) syncRevenueBanner(curSel.value);
@@ -1781,6 +1814,8 @@ function renderForecast() {
       </tr>
     </tbody>`;
 
+  renderForecast2();
+
   const live = window._fcLive;
   document.getElementById('fc-note').innerHTML = `
     <div>※ 試算（${FC.asOf}時点の入力）。件数は小数1桁、幅は悲観〜楽観。売上＝承諾数×${window._fcUnit === 'A' ? '70万円（指定単価）' : FC.unit.B + '万円（直近3か月の実績平均単価）'}。対象は渡辺・永田・志村・横山（2期目の表示方針に合わせ、田中さんを除く）。</div>
@@ -1796,6 +1831,208 @@ function renderForecast() {
     </details>`;
 }
 
+// ======================================================
+// 2期目 月別の売上予測（11月〜10月）
+// 27卒の実績（直近6か月の応募承諾のうち月0.7%が内定承諾）を28卒に当てはめる。
+// 応募承諾の月別実績はKPIシート「2026.月間KPI（28卒）」から読み込む（取得できない時は下の fallback）。
+// ======================================================
+const FC2 = {
+  asOf: '2026/11/10',
+  cas: FC.cas,
+  tanka27: { '渡辺': 65.3, '永田': 61.6, '志村': 70.0, '横山': 64.1 },  // 27卒の平均単価（万円）
+  baseUnit: 64.5,                                                       // 27卒全体の平均単価
+  baseOs: 545,                                                          // 下の os は11月ペース545件を基準にした月別の想定
+  scen: {
+    '現状維持': { os: [545, 400, 450, 450, 450, 450, 450, 450, 450, 220, 160, 100],
+                  h:  [0.0070, 0.0070, 0.0070, 0.0070, 0.0070, 0.0070, 0.0070, 0.0070, 0.0070, 0.0070, 0.0070, 0.0070] },
+    '改善込み': { os: [545, 400, 480, 520, 560, 600, 600, 580, 560, 280, 200, 120],
+                  h:  [0.0070, 0.0072, 0.0075, 0.0078, 0.0082, 0.0086, 0.0090, 0.0090, 0.0090, 0.0085, 0.0080, 0.0075] },
+    '上振れ':   { os: [545, 420, 520, 580, 640, 680, 680, 650, 620, 320, 230, 140],
+                  h:  [0.0075, 0.0080, 0.0085, 0.0090, 0.0095, 0.0100, 0.0100, 0.0100, 0.0100, 0.0090, 0.0085, 0.0080] },
+  },
+  tail: [7, 3.5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],   // 27卒の残り（4人計・件）
+  windowM: 6,        // 応募承諾から承諾までの有効期間（月）
+  octTaper: 0.4,     // 10月は就活シーズン終了で低下（27卒の9月→10月の比率）
+  // 取得できない時の応募承諾の月別実績（8月〜11月、11月は2026/11/10時点）
+  fallback: { '渡辺': [6, 30, 79, 30], '永田': [15, 41, 92, 39], '志村': [22, 27, 75, 49], '横山': [5, 25, 87, 47] },
+};
+window._fc2Scenario = '改善込み';
+window._fc2Os = null;
+
+const HOLIDAYS_FC2 = new Set(['2026-11-03','2026-11-23','2026-12-29','2026-12-30','2026-12-31','2027-01-01','2027-01-02','2027-01-03','2027-01-11','2027-02-11','2027-02-23','2027-03-22','2027-04-29','2027-05-03','2027-05-04','2027-05-05','2027-07-19','2027-08-11','2027-09-20','2027-09-23','2027-10-11']);
+function bizDaysFc2(y, m, upTo) {
+  let n = 0;
+  const last = Math.min(new Date(y, m, 0).getDate(), upTo);
+  for (let d = 1; d <= last; d++) {
+    const wd = new Date(y, m - 1, d).getDay();
+    if (wd === 0 || wd === 6) continue;
+    if (HOLIDAYS_FC2.has(`${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`)) continue;
+    n++;
+  }
+  return n;
+}
+const termMonthFc2 = t => ({ y: 2026 + (t >= 2 ? 1 : 0), m: ((10 + t) % 12) + 1 });
+
+async function fc2LoadOs() {
+  try {
+    const resp = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=1805430710`);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const rows = (await resp.text()).split('\n').map(line => {
+      const out = []; let cur = '', q = false;
+      for (const ch of line) { if (ch === '"') q = !q; else if (ch === ',' && !q) { out.push(cur.trim()); cur = ''; } else cur += ch; }
+      out.push(cur.trim()); return out;
+    });
+    const res = {}; let ca = null;
+    for (let i = 0; i < rows.length; i++) {
+      const c0 = (rows[i][0] || '').trim();
+      if (FC2.cas.includes(c0)) { ca = c0; res[ca] = res[ca] || []; continue; }
+      if (c0 === '田中' || c0 === '合計') { ca = null; continue; }
+      if (ca && /^\d+月$/.test(c0) && (rows[i][1] || '').trim() === '新規面談') {
+        const hdr = rows[i].map(h => h.trim());
+        const k = hdr.indexOf('応募承諾数');
+        for (let j = 1; j <= 2; j++) {
+          const r = rows[i + j];
+          if (r && (r[0] || '').trim() === '結果') { res[ca].push(parseFloat((r[k] || '').replace(/,/g, '')) || 0); break; }
+        }
+      }
+    }
+    if (FC2.cas.every(c => res[c] && res[c].length >= 4)) { window._fc2Os = res; return true; }
+  } catch (e) { console.warn('応募承諾の月別実績を取得できませんでした（仮の値を使用）', e); }
+  return false;
+}
+
+function fc2Compute(scName) {
+  const S = FC2.scen[scName];
+  const live = window._fc2Os;
+  const os = live || FC2.fallback;                         // CAごとの [8月, 9月, 10月, 11月, ...]
+  const act = window._termActual || {};                    // CAごとの月別の承諾実績（売上シート）
+  const today = new Date();
+  let cur = (today.getFullYear() - 2026) * 12 + (today.getMonth() + 1) - 11;   // 0=11月
+  let elapsedFixed = null;
+  if (!live) { cur = 0; elapsedFixed = 6; }                // 取得失敗時は2026/11/10時点の値で固定
+  cur = Math.max(0, Math.min(12, cur));
+
+  // 今月の応募承諾の月末見込み（営業日ペース）と、各人の月別系列
+  const estCur = {};
+  const seriesBase = {};
+  FC2.cas.forEach(c => {
+    const a = (os[c] || []).slice();
+    seriesBase[c] = a;
+    if (cur <= 11 && a.length > 3 + cur) {
+      const { y, m } = termMonthFc2(cur);
+      const total = bizDaysFc2(y, m, 31);
+      const elapsed = elapsedFixed !== null ? elapsedFixed : bizDaysFc2(y, m, today.getDate() - 1);
+      estCur[c] = elapsed > 0 ? a[3 + cur] / elapsed * total : (a[2 + cur] || 0);
+    }
+  });
+  const teamNov = FC2.cas.reduce((t, c) => t + (cur === 0 ? (estCur[c] || 0) : (seriesBase[c][3] || 0)), 0) || FC2.baseOs;
+  const scale = teamNov / FC2.baseOs;
+
+  // 取り分：直近の満月と今月ペースの平均
+  const lastIdx = Math.min(2 + cur, (seriesBase[FC2.cas[0]] || []).length - 1);
+  const shareOf = (vals) => { const sum = FC2.cas.reduce((t, c) => t + vals[c], 0) || 1; const o = {}; FC2.cas.forEach(c => o[c] = vals[c] / sum); return o; };
+  const lastFull = {}, nowEst = {};
+  FC2.cas.forEach(c => { lastFull[c] = seriesBase[c][cur <= 11 ? 2 + cur : lastIdx] || 0; nowEst[c] = cur <= 11 ? (estCur[c] || lastFull[c]) : lastFull[c]; });
+  const shL = shareOf(lastFull), shN = shareOf(nowEst);
+  const share = {}; FC2.cas.forEach(c => share[c] = 0.5 * shL[c] + 0.5 * shN[c]);
+
+  const teamConv = FC2.cas.reduce((a, c) => a + FC.conv27[c][0], 0) / FC2.cas.reduce((a, c) => a + FC.conv27[c][1], 0);
+  const out = { months: [], ca: {}, cur };
+  const teamM = Array.from({ length: 12 }, () => ({ os: 0, count: 0, rev: 0, actCount: 0, actRev: 0, isAct: false }));
+
+  FC2.cas.forEach(c => {
+    const idx = 0.5 + 0.5 * (FC.conv27[c][0] / FC.conv27[c][1]) / teamConv;
+    const unit = 0.5 * FC2.tanka27[c] + 0.5 * FC2.baseUnit;
+    // 系列：実績月＝実績、今月＝月末見込み、以降＝想定
+    const ser = [];
+    for (let i = 0; i < 15; i++) {
+      const t = i - 3;
+      if (t < cur) ser.push(seriesBase[c][i] || 0);
+      else if (t === cur) ser.push(estCur[c] !== undefined ? estCur[c] : (seriesBase[c][i] || 0));
+      else ser.push(S.os[t] * scale * share[c]);
+    }
+    let cnt = 0, rev = 0, actCnt = 0, actRev = 0;
+    for (let t = 0; t < 12; t++) {
+      const stock = ser.slice(Math.max(0, 3 + t - FC2.windowM), 3 + t).reduce((a, b) => a + b, 0);
+      let n28 = S.h[t] * idx * stock * (t === 11 ? FC2.octTaper : 1);
+      const model = n28 + FC2.tail[t] / 4;
+      const { m } = termMonthFc2(t);
+      const a = (act[c] && act[c][m + '月']) || { count: 0, amt: 0 };
+      let n, r;
+      if (t < cur) { n = a.count; r = a.amt / 10000; }
+      else if (t === cur) {
+        const { y, m: mm } = termMonthFc2(t);
+        const total = bizDaysFc2(y, mm, 31), el = elapsedFixed !== null ? elapsedFixed : bizDaysFc2(y, mm, today.getDate() - 1);
+        const remain = total > 0 ? Math.max(0, 1 - el / total) : 1;
+        n = Math.max(model, a.count + n28 * remain);
+        r = a.amt / 10000 + (n - a.count) * unit;
+      } else { n = model; r = model * unit; }
+      cnt += n; rev += r; actCnt += a.count; actRev += a.amt / 10000;
+      const tm = teamM[t];
+      tm.os += ser[3 + t]; tm.count += n; tm.rev += r; tm.actCount += a.count; tm.actRev += a.amt / 10000;
+    }
+    out.ca[c] = { count: cnt, rev, actCount: actCnt, actRev, unit, idx, share: share[c] };
+  });
+  teamM.forEach((tm, t) => { tm.isAct = t < cur; tm.isCur = t === cur; const { m } = termMonthFc2(t); tm.label = m + '月'; out.months.push(tm); });
+  out.total = { count: out.months.reduce((a, x) => a + x.count, 0), rev: out.months.reduce((a, x) => a + x.rev, 0) };
+  return out;
+}
+
+function renderForecast2() {
+  const tbl = document.getElementById('fc2-month');
+  if (!tbl || window._term !== 2) return;
+  const sc = window._fc2Scenario;
+  document.querySelectorAll('#fc2-scenario button').forEach(b => b.classList.toggle('active', b.dataset.sc === sc));
+  const r = fc2Compute(sc);
+  const f0 = v => Math.round(v).toLocaleString(), f1 = v => v.toFixed(1);
+  let cum = 0;
+  const rowsHtml = r.months.map((x, t) => {
+    cum += x.rev;
+    const tag = x.isAct ? '<span class="fc-tag fc-tag--act">実績</span>' : (x.isCur ? '<span class="fc-tag fc-tag--now">今月・見込み</span>' : '');
+    const sub = x.isCur ? `<span class="fc-small">実績 ${x.actCount}件／${f0(x.actRev)}万円</span>` : '';
+    return `<tr class="${x.isAct ? 'fc2-act' : (x.isCur ? 'fc2-cur' : '')}">
+      <td>${x.label}${tag}</td>
+      <td>${x.isAct ? '—' : f0(x.os)}<span class="sales-unit">件</span></td>
+      <td><span class="fc-num fc-num--main" style="font-size:16px;">${f1(x.count)}</span><span class="sales-unit">件</span></td>
+      <td><span class="sales-amount">${f0(x.rev)}</span><span class="sales-unit">万円</span>${sub}</td>
+      <td>${f0(cum)}<span class="sales-unit">万円</span></td>
+    </tr>`;
+  }).join('');
+  tbl.innerHTML = `<thead><tr><th>月</th><th>応募承諾（想定）</th><th>承諾</th><th>売上</th><th>累計売上</th></tr></thead>
+    <tbody>${rowsHtml}
+      <tr class="sales-total"><td>2期目 合計</td><td>—</td>
+        <td><span class="fc-num fc-num--main">${f1(r.total.count)}</span><span class="sales-unit">件</span></td>
+        <td><span class="sales-amount">${f0(r.total.rev)}</span><span class="sales-unit">万円</span></td>
+        <td>月平均 ${f0(r.total.rev / 12)}<span class="sales-unit">万円</span></td></tr></tbody>`;
+
+  const all = Object.keys(FC2.scen).map(k => ({ k, v: fc2Compute(k).total }));
+  const caRows = FC2.cas.map(c => ({ c, ...r.ca[c] })).sort((a, b) => b.rev - a.rev);
+  document.getElementById('fc2-ca').innerHTML = `
+    <thead><tr><th>順位</th><th>アドバイザー</th><th>2期目 実績（累計）</th><th>通年 承諾</th><th>通年 売上</th><th>承諾に至る率の目安</th></tr></thead>
+    <tbody>${caRows.map((x, i) => `<tr>
+      <td>${['🥇', '🥈', '🥉', '4位'][i]}</td><td>${x.c}</td>
+      <td>${x.actCount}件／${f0(x.actRev)}万円</td>
+      <td><span class="fc-num fc-num--main" style="font-size:16px;">${f1(x.count)}</span><span class="sales-unit">件</span></td>
+      <td><span class="sales-amount">${f0(x.rev)}</span><span class="sales-unit">万円</span></td>
+      <td>${x.idx.toFixed(2)}倍<span class="fc-small">応募承諾の取り分 ${(x.share * 100).toFixed(0)}%・単価 ${x.unit.toFixed(1)}万円</span></td>
+    </tr>`).join('')}</tbody>`;
+
+  document.getElementById('fc2-note').innerHTML = `
+    <div>※ 試算（${window._fc2Os ? '応募承諾はKPIシートの最新値' : FC2.asOf + '時点の仮の値'}）。対象は渡辺・永田・志村・横山の4人（田中さん・菊池さんを除く）。過去の月は売上シートの実績、今月は実績＋月末までの見込み。</div>
+    <div>※ 通年の合計：${all.map(a => `${a.k} ${f0(a.v.rev)}万円（${f0(a.v.count)}件）`).join('／')}</div>
+    <details style="margin-top:6px;">
+      <summary>予測の考え方と前提（クリックで開く）</summary>
+      <div style="margin-top:6px;">
+        ・27卒の実績から、「直近6か月に積み上がった応募承諾のうち、毎月約0.7%が内定承諾になる」と逆算（月0.5〜1.0%で推移）。28卒の応募承諾の積み上がりにこの率を当てはめ、27卒の残りを11〜1月に加算。<br>
+        ・現状維持＝11月の応募承諾ペース（営業日ベース）が続き、12月は年末で約73%、1月以降は約83%、8〜10月は就活シーズン終了で減少。率は0.70%のまま。<br>
+        ・改善込み＝面談数と提案が増えて応募承諾が約20%増え（4月ごろ）、承諾に至る率が0.70%→0.90%（27卒で最も高い渡辺さんの水準）に上がる想定。上振れ＝応募承諾が約25%増・率1.0%。<br>
+        ・各人＝応募承諾の取り分（直近の満月と今月ペースの平均）、承諾に至る率の差は27卒の決定率の差を半分だけ反映、単価は27卒の個人平均と全体平均64.5万円の中間。10月は27卒の9月→10月の比率で低下させる。<br>
+        ・根拠は27卒1シーズン分で、28卒は応募承諾が早く積み上がっているため、冬のあいだは率が下がる可能性があります（最終面接に進んだ学生がまだ少ない）。月が進むごとに実績で置き換わります。
+      </div>
+    </details>`;
+}
+document.querySelectorAll('#fc2-scenario button').forEach(b => b.addEventListener('click', () => { window._fc2Scenario = b.dataset.sc; renderForecast2(); }));
+
 document.querySelectorAll('#fc-scenario button').forEach(b => b.addEventListener('click', () => { window._fcScenario = b.dataset.sc; renderForecast(); }));
 document.querySelectorAll('#fc-unit button').forEach(b => b.addEventListener('click', () => { window._fcUnit = b.dataset.unit; renderForecast(); }));
 
@@ -1810,6 +2047,7 @@ document.querySelectorAll('#term-toggle button').forEach(b => {
   });
 });
 renderForecast();
+fc2LoadOs().then(() => renderForecast());
 loadSales();
 
 // ======================================================
