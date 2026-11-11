@@ -692,12 +692,13 @@
               <th>承諾数</th>
               <th>売上（万円）</th>
               <th>平均単価（万円）</th>
+              <th>面談数</th>
               <th>生産性（万円/面談）</th>
               <th style="width:160px;">売上割合</th>
             </tr>
           </thead>
           <tbody id="sales-body">
-            <tr><td colspan="5" style="text-align:center;color:var(--text-secondary);padding:20px;">読み込み中...</td></tr>
+            <tr><td colspan="7" style="text-align:center;color:var(--text-secondary);padding:20px;">読み込み中...</td></tr>
           </tbody>
         </table>
       </div>
@@ -900,6 +901,7 @@ function renderDashboard(allPersonsData, month) {
     : allPersonsData;
   const PLIST = PERSONS_LIST.filter(p => personsData[p]);
   const PERSONS = Object.keys(personsData);
+  const present = f => PERSONS.some(p => { const d = personsData[p][month]; return d && (d.result[f] !== undefined || d.target[f] !== undefined); });
 
   // --- Revenue banner（月変更時に同期）---
   syncRevenueBanner(month);
@@ -929,6 +931,9 @@ function renderDashboard(allPersonsData, month) {
   document.getElementById('hero-naisho-target').textContent = totNaishoTarget;
   document.getElementById('hero-naisho-pct').textContent    = `達成率 ${totNaishoPct}%`;
 
+  const hero1ji = document.getElementById('hero-1ji-result')?.closest('.hero-card');
+  if (hero1ji) hero1ji.style.display = present('1次選考参加数') ? '' : 'none';
+
   setTimeout(() => {
     document.getElementById('pb-naitei').style.width  = Math.min(100, totNaiteiPct) + '%';
     document.getElementById('pb-1ji').style.width     = Math.min(100, tot1jiPct) + '%';
@@ -949,7 +954,7 @@ function renderDashboard(allPersonsData, month) {
   });
 
   // ファネルキー定義（表示順）
-  const FUNNEL_KEYS = ['新規面談','提案数','応募承諾数','説明会参加済み','1次選考参加数','最終参加数','内定数','内定承諾数'];
+  const FUNNEL_KEYS = ['新規面談','提案数','応募承諾数','説明会参加済み','1次選考参加数','最終参加数','内定数','内定承諾数'].filter(present);
 
   // 全担当者の各ステップ間転換率を事前計算
   const allFunnelRatios = {};
@@ -1012,14 +1017,14 @@ function renderDashboard(allPersonsData, month) {
       <div class="person-card" style="border-top-color:${PERSON_COLORS[idx % PERSON_COLORS.length]}">
         <h3>${p}</h3>
         <div class="person-kpis">
-          ${kpiHtml('新規面談',         r['新規面談']         ?? 0, t['新規面談']         ?? 0, '新規面談',         '', worstKey==='新規面談')}
-          ${kpiHtml('提案数',           r['提案数']           ?? 0, t['提案数']           ?? 0, '提案数',           '', worstKey==='提案数')}
-          ${kpiHtml('応募承諾数',       r['応募承諾数']       ?? 0, t['応募承諾数']       ?? 0, '応募承諾数',       '', worstKey==='応募承諾数')}
-          ${kpiHtml('説明会参加',       r['説明会参加済み']   ?? 0, t['説明会参加済み']   ?? 0, '説明会参加済み',   '', worstKey==='説明会参加済み')}
-          ${kpiHtml('◆ 1次選考参加数', r['1次選考参加数']   ?? 0, t['1次選考参加数']   ?? 0, '1次選考参加数',   'highlight2', worstKey==='1次選考参加数')}
-          ${kpiHtml('最終参加数',       r['最終参加数']       ?? 0, t['最終参加数']       ?? 0, '最終参加数',       '', worstKey==='最終参加数')}
-          ${kpiHtml('★ 内定数',        r['内定数']          ?? 0, t['内定数']          ?? 0, '内定数',          'highlight',  worstKey==='内定数')}
-          ${kpiHtml('🥇 内定承諾数',    r['内定承諾数']      ?? 0, t['内定承諾数']      ?? 0, '内定承諾数',      'highlight-gold', worstKey==='内定承諾数')}
+          ${present('新規面談') ? kpiHtml('新規面談',         r['新規面談']         ?? 0, t['新規面談']         ?? 0, '新規面談',         '', worstKey==='新規面談') : ''}
+          ${present('提案数') ? kpiHtml('提案数',           r['提案数']           ?? 0, t['提案数']           ?? 0, '提案数',           '', worstKey==='提案数') : ''}
+          ${present('応募承諾数') ? kpiHtml('応募承諾数',       r['応募承諾数']       ?? 0, t['応募承諾数']       ?? 0, '応募承諾数',       '', worstKey==='応募承諾数') : ''}
+          ${present('説明会参加済み') ? kpiHtml('説明会参加',       r['説明会参加済み']   ?? 0, t['説明会参加済み']   ?? 0, '説明会参加済み',   '', worstKey==='説明会参加済み') : ''}
+          ${present('1次選考参加数') ? kpiHtml('◆ 1次選考参加数', r['1次選考参加数']   ?? 0, t['1次選考参加数']   ?? 0, '1次選考参加数',   'highlight2', worstKey==='1次選考参加数') : ''}
+          ${present('最終参加数') ? kpiHtml('最終参加数',       r['最終参加数']       ?? 0, t['最終参加数']       ?? 0, '最終参加数',       '', worstKey==='最終参加数') : ''}
+          ${present('内定数') ? kpiHtml('★ 内定数',        r['内定数']          ?? 0, t['内定数']          ?? 0, '内定数',          'highlight',  worstKey==='内定数') : ''}
+          ${present('内定承諾数') ? kpiHtml('🥇 内定承諾数',    r['内定承諾数']      ?? 0, t['内定承諾数']      ?? 0, '内定承諾数',      'highlight-gold', worstKey==='内定承諾数') : ''}
         </div>
       </div>`;
   });
@@ -1132,7 +1137,7 @@ function buildMonthSelector(months, personsData) {
     window._allPersons = personsData;
     renderDashboard(personsData, sel.value);
   }
-  sel.addEventListener('change', () => renderDashboard(personsData, sel.value));
+  sel.onchange = () => renderDashboard(personsData, sel.value);
 }
 
 // ======================================================
@@ -1222,6 +1227,7 @@ const HEADER_ALIASES = {
   '提案数':         '提案数',
   '応募承諾数':     '応募承諾数',
   '説明会参加済み':  '説明会参加済み',
+  '説明会参加数':    '説明会参加済み',  // 28卒シート表記
   '1次選考参加数':   '1次選考参加数',
   '最終参加数':     '最終参加数',
   '内定数':         '内定数',
@@ -1310,23 +1316,36 @@ function parseSheetData(csvText) {
 // ======================================================
 document.getElementById('updated').textContent = new Date().toLocaleString('ja-JP');
 
-(async () => {
-  try {
-    const resp = await fetch(CSV_URL);
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const text = await resp.text();
-    const { personsData, months } = parseSheetData(text);
+// 期の初期値：2026/11/1 以降は2期目
+window._term = Date.now() >= Date.parse('2026-11-01T00:00:00+09:00') ? 2 : 1;
 
-    if (months.length > 0) {
-      showDashboard();
-      buildMonthSelector(months, personsData);
-    } else {
-      throw new Error('シートのデータが読み取れませんでした。');
-    }
+// KPIシート：1期目＝2026.月間KPI（27卒）／2期目＝2026.月間KPI（28卒・8月〜、2期目は11月から）
+const KPI_GIDS = { 1: GID, 2: '1805430710' };
+window._kpiCache = {};
+async function getKpi(term) {
+  if (window._kpiCache[term]) return window._kpiCache[term];
+  const resp = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${KPI_GIDS[term]}`);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  const d = parseSheetData(await resp.text());
+  if (!d.months.length) throw new Error('シートのデータが読み取れませんでした。');
+  return (window._kpiCache[term] = d);
+}
+const termMonths = (term, months) => (term === 2 && months.length > 3 ? months.slice(3) : months);
+
+async function loadKpi(initial) {
+  const term = window._term;
+  try {
+    const d = await getKpi(term);
+    if (term !== window._term) return;
+    window._allPersons = d.personsData;
+    showDashboard();
+    buildMonthSelector(termMonths(term, d.months), d.personsData);
   } catch (e) {
-    showError(e.message || 'スプレッドシートの取得に失敗しました。');
+    if (initial) showError(e.message || 'スプレッドシートの取得に失敗しました。');
+    else console.warn('KPIシートの取得に失敗しました', e);
   }
-})();
+}
+loadKpi(true);
 
 // ======================================================
 // 承諾実績テーブル（期ごとに切り替え）
@@ -1337,7 +1356,6 @@ const TERMS = {
   1: { label: '1期目', grads: ['27卒'], gid: '588019868' },
   2: { label: '2期目', grads: ['27卒', '28卒'], gid: '738575938', exclude: ['田中'] },
 };
-window._term = Date.now() >= Date.parse('2026-11-01T00:00:00+09:00') ? 2 : 1;
 
 async function loadSales() {
   const SALES_SHEET_ID  = '1E3iQ6_jg8ohBJFShs7uRxFR1CtNygSYU7F-u8Qj_0nU';
@@ -1363,11 +1381,11 @@ async function loadSales() {
   if (!SALES_GID) {
     window._salesByMonth = {};
     syncRevenueBanner(document.getElementById('monthSelect').value);
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);padding:20px;">' + T.label + 'の承諾実績はまだありません（0件 / 0万円）</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-secondary);padding:20px;">' + T.label + 'の承諾実績はまだありません（0件 / 0万円）</td></tr>';
     badge.textContent = '0件 / 0万円';
     return;
   }
-  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);padding:20px;">読み込み中...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-secondary);padding:20px;">読み込み中...</td></tr>';
   badge.textContent = '集計中...';
 
   try {
@@ -1531,6 +1549,22 @@ async function loadSales() {
       }
     }
 
+    // 2期目：面談数は28卒KPIシートの新規面談（11月〜）を使う（着座数は期をまたいだ累計のため）
+    if (myTerm === 2) {
+      try {
+        const k = await getKpi(2);
+        Object.keys(meetingMap).forEach(n => delete meetingMap[n]);
+        termMonths(2, k.months).forEach(m => {
+          Object.keys(k.personsData).forEach(n => {
+            if ((T.exclude || []).includes(n)) return;
+            const v = k.personsData[n][m]?.result?.['新規面談'];
+            if (v) meetingMap[n] = (meetingMap[n] || 0) + v;
+          });
+        });
+      } catch (e) { console.warn('2期目の面談数を取得できませんでした', e); }
+      if (myTerm !== window._term) return;
+    }
+
     // 承諾実績 + ヨミ表のアドバイザーをマージ
     Object.keys(yomiMap).forEach(adv => {
       if (!advisorMap[adv]) advisorMap[adv] = { count: 0, total: 0 };
@@ -1544,7 +1578,7 @@ async function loadSales() {
     const sorted = Object.entries(advisorMap).sort((a, b) => b[1].total - a[1].total);
 
     if (sorted.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);padding:20px;">' + GRAD + '承諾データなし</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-secondary);padding:20px;">' + GRAD + '承諾データなし</td></tr>';
       badge.textContent = '0件';
     } else {
       // 承諾実績テーブル描画
@@ -1564,6 +1598,7 @@ async function loadSales() {
           <td><span class="sales-count">${d.count}</span><span class="sales-unit">件</span></td>
           <td><span class="sales-amount">${toMan(d.total)}</span><span class="sales-unit">万円</span></td>
           <td>${avgMan(d.total, d.count)} 万円</td>
+          <td>${meetingMap[name] ? meetingMap[name] + '<span class="sales-unit">件</span>' : '—'}</td>
           <td style="font-weight:600;color:var(--accent-dk);">${productivity(d.total, name)} <span style="font-size:11px;font-weight:400;color:var(--text-secondary);">万円/面談</span></td>
           <td>
             <div style="font-size:11px;color:var(--text-secondary);margin-bottom:3px;">${barPct(d.total)}%</div>
@@ -1576,6 +1611,7 @@ async function loadSales() {
           <td><span class="sales-count">${grandCount}</span><span class="sales-unit">件</span></td>
           <td><span class="sales-amount">${toMan(grandTotal)}</span><span class="sales-unit">万円</span></td>
           <td>${avgMan(grandTotal, grandCount)} 万円</td>
+          <td>${grandMeetings > 0 ? grandMeetings + '<span class="sales-unit">件</span>' : '—'}</td>
           <td style="font-weight:600;">${grandMeetings > 0 ? (grandTotal / 10000 / grandMeetings).toFixed(1) : '—'} <span style="font-size:11px;font-weight:400;color:var(--text-secondary);">万円/面談</span></td>
           <td>—</td>
         </tr>
@@ -1643,7 +1679,7 @@ async function loadSales() {
     }
 
   } catch (e) {
-    document.getElementById('sales-body').innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-secondary);padding:20px;">データ取得失敗: ${e.message}</td></tr>`;
+    document.getElementById('sales-body').innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text-secondary);padding:20px;">データ取得失敗: ${e.message}</td></tr>`;
     document.getElementById('sales-total-badge').textContent = 'エラー';
   }
 }
@@ -2043,7 +2079,7 @@ document.querySelectorAll('#term-toggle button').forEach(b => {
     window._fcLive = null;
     renderForecast();
     loadSales();
-    if (window._allPersons) renderDashboard(window._allPersons, document.getElementById('monthSelect').value);
+    loadKpi();
   });
 });
 renderForecast();
